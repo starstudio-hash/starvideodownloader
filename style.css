@@ -578,20 +578,94 @@ body {
     color: var(--gray-700);
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-    .hero-container {
-        flex-direction: column;
-        text-align: center;
-    }
-
+/* ===== Responsive — Tablet (1024px) ===== */
+@media (max-width: 1024px) {
     .hero h1 {
-        font-size: 36px;
+        font-size: 42px;
     }
 
     .hero-subtitle {
+        font-size: 17px;
+    }
+
+    .hero-container {
+        gap: 40px;
+    }
+
+    .app-icon-hero {
+        width: 200px;
+        height: 200px;
+        border-radius: 40px;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .section-title {
+        font-size: 30px;
+    }
+
+    .section-subtitle {
+        font-size: 16px;
+    }
+
+    .features,
+    .pricing,
+    .how-it-works,
+    .faq,
+    .download {
+        padding: 72px 0;
+    }
+
+    .screenshot-wrapper {
+        max-width: 560px;
+    }
+}
+
+/* ===== Responsive — Mobile (768px) ===== */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 20px;
+    }
+
+    /* Nav */
+    .nav-container {
+        height: 56px;
+    }
+
+    .nav-links {
+        gap: 12px;
+    }
+
+    .nav-links a:not(.btn) {
+        display: none;
+    }
+
+    .logo span {
+        font-size: 15px;
+    }
+
+    /* Hero */
+    .hero {
+        padding: 100px 0 48px;
+    }
+
+    .hero-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 32px;
+    }
+
+    .hero h1 {
+        font-size: 32px;
+    }
+
+    .hero-subtitle {
+        font-size: 16px;
         margin-left: auto;
         margin-right: auto;
+        margin-bottom: 24px;
     }
 
     .hero-buttons {
@@ -599,33 +673,165 @@ body {
         flex-wrap: wrap;
     }
 
+    .btn-lg {
+        padding: 12px 22px;
+        font-size: 15px;
+    }
+
     .app-icon-hero {
-        width: 160px;
-        height: 160px;
-        border-radius: 32px;
+        width: 140px;
+        height: 140px;
+        border-radius: 28px;
+    }
+
+    .hero-image {
+        order: -1;
+    }
+
+    /* Screenshot */
+    .screenshot-section {
+        padding: 0 0 40px;
+    }
+
+    .screenshot-wrapper {
+        max-width: 100%;
+        border-radius: var(--radius);
+    }
+
+    /* Sites */
+    .sites-bar {
+        padding: 28px 0;
+    }
+
+    .sites-list {
+        gap: 16px;
+    }
+
+    .sites-list span {
+        font-size: 13px;
+    }
+
+    /* Features */
+    .features,
+    .pricing,
+    .how-it-works,
+    .faq,
+    .download {
+        padding: 56px 0;
+    }
+
+    .section-title {
+        font-size: 26px;
+    }
+
+    .section-subtitle {
+        font-size: 15px;
+        margin-bottom: 36px;
     }
 
     .features-grid,
     .steps-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 
+    .feature-card {
+        padding: 24px;
+    }
+
+    /* Pricing */
     .pricing-grid,
     .faq-grid {
         grid-template-columns: 1fr;
     }
 
-    .nav-links {
-        gap: 16px;
+    .pricing-card {
+        padding: 32px 24px;
     }
 
-    .nav-links a:not(.btn) {
-        display: none;
+    .price {
+        font-size: 40px;
     }
 
+    /* Steps */
+    .steps-grid {
+        margin-top: 36px;
+        gap: 32px;
+    }
+
+    .step-number {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
+
+    /* FAQ */
+    .faq-grid {
+        margin-top: 36px;
+    }
+
+    .faq-item {
+        padding: 20px;
+    }
+
+    /* Download CTA */
+    .download-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+    }
+
+    .download h2 {
+        font-size: 28px;
+    }
+
+    .download p {
+        font-size: 16px;
+    }
+
+    /* Footer */
     .footer-container {
         flex-direction: column;
         gap: 16px;
         text-align: center;
+    }
+}
+
+/* ===== Responsive — Small Mobile (480px) ===== */
+@media (max-width: 480px) {
+    .hero h1 {
+        font-size: 28px;
+    }
+
+    .hero-subtitle {
+        font-size: 15px;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .btn-lg {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .app-icon-hero {
+        width: 120px;
+        height: 120px;
+        border-radius: 24px;
+    }
+
+    .section-title {
+        font-size: 22px;
+    }
+
+    .sites-list span {
+        font-size: 12px;
+    }
+
+    .sites-list {
+        gap: 12px;
     }
 }
