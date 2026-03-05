@@ -221,6 +221,25 @@ body {
     filter: drop-shadow(0 20px 40px rgba(37, 99, 235, 0.3));
 }
 
+/* ===== Screenshot ===== */
+.screenshot-section {
+    padding: 0 0 60px;
+    background: linear-gradient(180deg, var(--white) 0%, var(--gray-50) 100%);
+}
+
+.screenshot-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.app-screenshot {
+    width: 100%;
+    display: block;
+}
+
 /* ===== Sites Bar ===== */
 .sites-bar {
     padding: 40px 0;
