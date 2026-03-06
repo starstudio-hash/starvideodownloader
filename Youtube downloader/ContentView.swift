@@ -2,23 +2,981 @@
 //  ContentView.swift
 //  Youtube downloader
 //
-//  Created by User on 2026-03-04.
-//
 
 import SwiftUI
+import UniformTypeIdentifiers
+
+enum AppTab: String, CaseIterable {
+    case downloads = "Downloads"
+    case convert = "Convert"
+    case repair = "Repair"
+    case history = "History"
+    case stats = "Stats"
+
+    var icon: String {
+        switch self {
+        case .downloads: return "arrow.down.circle.fill"
+        case .convert:   return "arrow.triangle.2.circlepath"
+        case .repair:    return "wrench.and.screwdriver.fill"
+        case .history:   return "clock.fill"
+        case .stats:     return "chart.bar.fill"
+        }
+    }
+}
+
+enum StatusFilter: String, CaseIterable {
+    case all = "All"
+    case active = "Active"
+    case completed = "Completed"
+    case failed = "Failed"
+}
 
 struct ContentView: View {
+    @Environment(DownloadManager.self) private var manager
+    @Environment(LicenseManager.self) private var license
+    @State private var urlInput: String = ""
+    @State private var selectedQuality: VideoQuality = .best1080
+    @State private var selectedFormat: OutputFormat = .mp4
+    @State private var downloadSubtitles: Bool = false
+    @State private var downloadPlaylist: Bool = false
+    @State private var showSettings: Bool = false
+    @State private var showBatchInput: Bool = false
+    @State private var showInvalidURLAlert: Bool = false
+    @State private var showInstallAlert: Bool = false
+    @State private var showDuplicateAlert: Bool = false
+    @State private var isDroppingURL: Bool = false
+    @State private var showUpgradePrompt: Bool = false
+    @State private var upgradeReason: UpgradeReason = .dailyLimitReached
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    // Tab navigation
+    @State private var selectedTab: AppTab = .downloads
+    // Search & filter
+    @State private var searchText: String = ""
+    @State private var statusFilter: StatusFilter = .all
+    // Playlist confirmation
+    @State private var pendingPlaylistURL: String? = nil
+    @State private var pendingPlaylistItemCount: Int = 0
+    @State private var showPlaylistConfirm: Bool = false
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        VStack(spacing: 0) {
+            // Top toolbar
+            headerBar
+
+            Divider()
+
+            // Tab bar
+            tabBar
+
+            Divider()
+
+            // Tab content
+            switch selectedTab {
+            case .downloads:
+                downloadsContent
+            case .convert:
+                ZStack {
+                    ConversionView(manager: manager, conversionManager: manager.conversionManager)
+                    if !license.hasFullAccess {
+                        ProFeatureOverlay(featureName: "Video Conversion")
+                    }
+                }
+            case .repair:
+                ZStack {
+                    RepairView(manager: manager, repairManager: manager.repairManager)
+                    if !license.hasFullAccess {
+                        ProFeatureOverlay(featureName: "Video Repair")
+                    }
+                }
+            case .history:
+                HistoryView(manager: manager)
+            case .stats:
+                StatsView(manager: manager)
+                    .onAppear { manager.startBandwidthSampling() }
+                    .onDisappear { manager.stopBandwidthSampling() }
+            }
         }
-        .padding()
+        .frame(minWidth: 760, minHeight: 520)
+        .background(Color(NSColor.windowBackgroundColor))
+        .sheet(isPresented: $showSettings) {
+            SettingsView(manager: manager, settings: manager.settings)
+        }
+        .sheet(isPresented: $showBatchInput) {
+            BatchURLInputView(manager: manager)
+        }
+        .sheet(isPresented: $showUpgradePrompt) {
+            UpgradePromptView(reason: upgradeReason)
+        }
+        .alert("Invalid URL", isPresented: $showInvalidURLAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please enter a valid video URL.\n\nSupported: YouTube, Vimeo, Twitter/X, TikTok, Instagram, Reddit, Dailymotion, and 1800+ other sites.")
+        }
+        .alert("yt-dlp Not Installed", isPresented: $showInstallAlert) {
+            Button("Install Now") {
+                manager.installYtdlp()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("yt-dlp is required to download videos.\n\nTap \"Install Now\" to download and install it automatically.")
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pasteAndDownload)) { _ in
+            if let str = NSPasteboard.general.string(forType: .string) {
+                urlInput = str.trimmingCharacters(in: .whitespacesAndNewlines)
+                submitDownload()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showBatchInput)) { _ in
+            if license.hasFullAccess {
+                showBatchInput = true
+            } else {
+                upgradeReason = .batchDisabled
+                showUpgradePrompt = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .clearCompleted)) { _ in
+            manager.items.removeAll { item in
+                if case .completed = item.status { return true }
+                if case .cancelled = item.status { return true }
+                return false
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showSettings)) { _ in
+            showSettings = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchTab)) { notification in
+            if let tab = notification.object as? AppTab {
+                selectedTab = tab
+            }
+        }
+        .alert("Already Downloading", isPresented: $showDuplicateAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("This URL is already in the download queue.")
+        }
+        .alert("Download Entire Playlist?", isPresented: $showPlaylistConfirm) {
+            Button("Download All \(pendingPlaylistItemCount > 0 ? "(\(pendingPlaylistItemCount) videos)" : "")") {
+                if let url = pendingPlaylistURL {
+                    startPlaylistDownload(url: url)
+                }
+                pendingPlaylistURL = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingPlaylistURL = nil
+            }
+        } message: {
+            if pendingPlaylistItemCount > 0 {
+                Text("This will download \(pendingPlaylistItemCount) videos. Each video will be added to the queue and downloaded sequentially (up to \(manager.settings.maxConcurrentDownloads) at a time).")
+            } else {
+                Text("This will download all videos in the playlist. Each video will be added to the queue and downloaded sequentially (up to \(manager.settings.maxConcurrentDownloads) at a time).")
+            }
+        }
+    }
+
+    // MARK: - Header
+
+    private var headerBar: some View {
+        HeaderBarView(
+            activeCount: activeDownloadCount,
+            hasActiveDownloads: manager.hasActiveDownloads,
+            hasPausedItems: manager.hasPausedItems,
+            totalBandwidth: manager.totalBandwidth,
+            onSettingsTapped: { showSettings = true },
+            onPauseAll: { manager.pauseAll() },
+            onResumeAll: { manager.resumeAll() }
+        )
+    }
+
+    // MARK: - Tab Bar
+
+    private var tabBar: some View {
+        TabBarView(selectedTab: $selectedTab)
+    }
+
+    // MARK: - Downloads Content
+
+    private var downloadsContent: some View {
+        VStack(spacing: 0) {
+            // URL input area
+            urlInputArea
+
+            // Setup banner when yt-dlp is not installed
+            if !manager.isYtdlpInstalled {
+                setupBanner
+            }
+
+            Divider()
+
+            // Downloads list
+            if manager.items.isEmpty {
+                emptyState
+            } else {
+                downloadsList
+            }
+        }
+    }
+
+    private var setupBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.app.fill")
+                .font(.system(size: 24))
+                .foregroundStyle(Color.accentColor)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Quick Setup Required")
+                    .font(.callout.bold())
+                Text("Install yt-dlp to start downloading videos. It's free and takes one click.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if manager.isInstallingYtdlp {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(manager.installProgress)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Button {
+                    manager.installYtdlp()
+                } label: {
+                    Text("Install")
+                        .fontWeight(.medium)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+            }
+        }
+        .padding(12)
+        .background(Color.accentColor.opacity(0.06))
+    }
+
+    // MARK: - URL Input
+
+    private var urlInputArea: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                // URL field with drag-and-drop support
+                HStack(spacing: 6) {
+                    Image(systemName: isDroppingURL ? "arrow.down.circle" : detectedSiteIcon)
+                        .foregroundStyle(isDroppingURL ? Color.accentColor : detectedSiteColor)
+                        .font(.system(size: 13))
+                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isDroppingURL)
+                    if let siteName = detectedSiteName {
+                        Text(siteName)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(detectedSiteColor)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(detectedSiteColor.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                    }
+                    TextField("Paste video URL (YouTube, Vimeo, Twitter, 1800+ sites)…", text: $urlInput)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13))
+                        .onSubmit { submitDownload() }
+                        .accessibilityLabel("Video URL input")
+                        .accessibilityHint("Enter a video URL to download")
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(isDroppingURL ? Color.accentColor.opacity(0.08) : Color(NSColor.textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isDroppingURL ? Color.accentColor : Color(NSColor.separatorColor), lineWidth: isDroppingURL ? 2 : 1)
+                )
+                .onDrop(of: [UTType.url, UTType.plainText], isTargeted: $isDroppingURL) { providers in
+                    handleDrop(providers: providers)
+                }
+
+                // Paste button
+                Button {
+                    if let str = NSPasteboard.general.string(forType: .string) {
+                        urlInput = str
+                    }
+                } label: {
+                    Label("Paste", systemImage: "doc.on.clipboard")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(SecondaryButtonStyle())
+
+                // Batch URL button
+                Button {
+                    if license.hasFullAccess {
+                        showBatchInput = true
+                    } else {
+                        upgradeReason = .batchDisabled
+                        showUpgradePrompt = true
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "list.bullet.rectangle")
+                            .font(.system(size: 12))
+                        if !license.hasFullAccess {
+                            Text("(Pro)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+                .buttonStyle(SecondaryButtonStyle())
+                .help(license.hasFullAccess ? "Batch URL input" : "Pro feature: Batch URL input")
+
+                // Download button
+                Button {
+                    submitDownload()
+                } label: {
+                    Label("Download", systemImage: "arrow.down.circle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .keyboardShortcut(.return, modifiers: .command)
+            }
+
+            // Options row
+            HStack(spacing: 16) {
+                // Quality picker
+                HStack(spacing: 6) {
+                    Image(systemName: "4k.tv")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Picker("Quality", selection: $selectedQuality) {
+                        ForEach(VideoQuality.allCases) { q in
+                            if !license.hasFullAccess && license.isProOnly(q) {
+                                Text("\(q.rawValue) (Pro)").tag(q)
+                            } else {
+                                Text(q.rawValue).tag(q)
+                            }
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 180)
+                    .onChange(of: selectedQuality) {
+                        if !license.hasFullAccess && license.isProOnly(selectedQuality) {
+                            selectedQuality = .best1080
+                            upgradeReason = .qualityRestricted
+                            showUpgradePrompt = true
+                        }
+                    }
+                    .onChange(of: license.hasFullAccess) {
+                        if !license.hasFullAccess && license.isProOnly(selectedQuality) {
+                            selectedQuality = .best1080
+                        }
+                    }
+                }
+
+                // Format picker
+                HStack(spacing: 6) {
+                    Image(systemName: "film")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Picker("Format", selection: $selectedFormat) {
+                        ForEach(OutputFormat.allCases) { f in
+                            Text(f.rawValue).tag(f)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 90)
+                }
+
+                Divider().frame(height: 16)
+
+                // Subtitles toggle
+                Toggle(isOn: $downloadSubtitles) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "captions.bubble")
+                            .font(.system(size: 11))
+                        Text("Subtitles")
+                            .font(.system(size: 12))
+                    }
+                }
+                .toggleStyle(.checkbox)
+
+                // Playlist toggle
+                Toggle(isOn: $downloadPlaylist) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 11))
+                        Text("Playlist")
+                            .font(.system(size: 12))
+                        if !license.hasFullAccess {
+                            Text("(Pro)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+                .toggleStyle(.checkbox)
+                .disabled(!license.hasFullAccess)
+                .onTapGesture {
+                    if !license.hasFullAccess {
+                        upgradeReason = .playlistDisabled
+                        showUpgradePrompt = true
+                    }
+                }
+
+                Spacer()
+
+                // Daily download counter for free users
+                if !license.hasFullAccess {
+                    Text("\(license.dailyDownloadsRemaining) downloads left today")
+                        .font(.caption)
+                        .foregroundStyle(license.dailyDownloadsRemaining <= 1 ? .red : .secondary)
+                }
+
+                Text("Output: \(manager.settings.outputDirectory.lastPathComponent)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "arrow.down.circle")
+                .font(.system(size: 52))
+                .foregroundStyle(Color.secondary.opacity(0.4))
+
+            Text("No downloads yet")
+                .font(.title3)
+                .fontWeight(.medium)
+                .foregroundStyle(.secondary)
+
+            Text("Paste a video URL above and click Download.\nSupports YouTube, Vimeo, Twitter/X, TikTok, Instagram, and 1800+ other sites.")
+                .font(.callout)
+                .foregroundStyle(Color.secondary.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 420)
+
+            if !manager.isYtdlpInstalled {
+                VStack(spacing: 12) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.orange)
+                        Text("yt-dlp is required to download videos")
+                            .font(.callout)
+                    }
+                    if manager.isInstallingYtdlp {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(manager.installProgress)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Button {
+                            manager.installYtdlp()
+                        } label: {
+                            Label("Install yt-dlp", systemImage: "arrow.down.circle.fill")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.regular)
+                    }
+                }
+                .padding(16)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Cached active count — avoids redundant O(n) filter in headerBar
+    private var activeDownloadCount: Int {
+        manager.items.reduce(0) { $0 + ($1.status.isActive ? 1 : 0) }
+    }
+
+    // MARK: - Downloads List
+
+    private var filteredItems: [DownloadItem] {
+        var items = manager.items
+
+        // Apply status filter
+        switch statusFilter {
+        case .all: break
+        case .active:
+            items = items.filter { $0.status.isActive }
+        case .completed:
+            items = items.filter { if case .completed = $0.status { return true }; return false }
+        case .failed:
+            items = items.filter { if case .failed = $0.status { return true }; return false }
+        }
+
+        // Apply search
+        if !searchText.isEmpty {
+            let query = searchText.lowercased()
+            items = items.filter {
+                $0.title.lowercased().contains(query) ||
+                $0.url.lowercased().contains(query) ||
+                $0.channelName.lowercased().contains(query)
+            }
+        }
+
+        return items
+    }
+
+    private var downloadsList: some View {
+        let currentFiltered = filteredItems
+        let totalCount = manager.items.count
+        return VStack(spacing: 0) {
+            // Toolbar row with search and filter
+            HStack(spacing: 10) {
+                // Search field
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("Search…", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11))
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Color(NSColor.textBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 5))
+                .frame(width: 160)
+
+                // Status filter
+                ForEach(StatusFilter.allCases, id: \.self) { filter in
+                    Button {
+                        statusFilter = filter
+                    } label: {
+                        Text(filter.rawValue)
+                            .font(.caption)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(statusFilter == filter ? Color.accentColor.opacity(0.15) : Color.clear)
+                            .foregroundStyle(statusFilter == filter ? Color.accentColor : .secondary)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
+
+                Text("\(currentFiltered.count) of \(totalCount) item\(totalCount == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Button("Clear Completed") {
+                    manager.items.removeAll { item in
+                        if case .completed = item.status { return true }
+                        if case .cancelled = item.status { return true }
+                        return false
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(Color.accentColor)
+
+                Text("·")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Button("Clear All") {
+                    for item in manager.items where item.status.isActive {
+                        manager.cancelDownload(item)
+                    }
+                    manager.items.removeAll()
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(Color.secondary)
+
+                Text("·")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Button("Export") {
+                    exportQueue()
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(Color.accentColor)
+
+                Button("Import") {
+                    importQueue()
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(Color.accentColor)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .background(Color(NSColor.controlBackgroundColor))
+
+            Divider()
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(currentFiltered) { item in
+                        DownloadRowView(item: item, manager: manager)
+                            .draggable(item.id.uuidString) {
+                                // Drag preview
+                                Text(item.title)
+                                    .padding(8)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                            .dropDestination(for: String.self) { droppedItems, _ in
+                                guard let sourceIDString = droppedItems.first,
+                                      let sourceID = UUID(uuidString: sourceIDString) else {
+                                    return false
+                                }
+                                manager.moveItem(from: sourceID, to: item.id)
+                                return true
+                            }
+                        Divider()
+                            .padding(.leading, 16)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    // MARK: - Site Detection
+
+    private var detectedSiteHost: String? {
+        let trimmed = urlInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed), let host = url.host?.lowercased() else { return nil }
+        return host
+    }
+
+    private var detectedSiteName: String? {
+        guard let host = detectedSiteHost else { return nil }
+        if host.contains("youtube.com") || host.contains("youtu.be") { return "YouTube" }
+        if host.contains("vimeo.com") { return "Vimeo" }
+        if host.contains("twitter.com") || host.contains("x.com") { return "X" }
+        if host.contains("tiktok.com") { return "TikTok" }
+        if host.contains("instagram.com") { return "Instagram" }
+        if host.contains("reddit.com") { return "Reddit" }
+        if host.contains("dailymotion.com") { return "Dailymotion" }
+        if host.contains("twitch.tv") { return "Twitch" }
+        if host.contains("soundcloud.com") { return "SoundCloud" }
+        if host.contains("facebook.com") || host.contains("fb.watch") { return "Facebook" }
+        return nil
+    }
+
+    private var detectedSiteIcon: String {
+        guard let host = detectedSiteHost else { return "link" }
+        if host.contains("youtube.com") || host.contains("youtu.be") { return "play.rectangle.fill" }
+        if host.contains("vimeo.com") { return "video.fill" }
+        if host.contains("twitter.com") || host.contains("x.com") { return "bubble.left.fill" }
+        if host.contains("tiktok.com") { return "music.note" }
+        if host.contains("instagram.com") { return "camera.fill" }
+        if host.contains("reddit.com") { return "text.bubble.fill" }
+        if host.contains("twitch.tv") { return "gamecontroller.fill" }
+        if host.contains("soundcloud.com") { return "waveform" }
+        if host.contains("facebook.com") || host.contains("fb.watch") { return "person.2.fill" }
+        return "link"
+    }
+
+    private var detectedSiteColor: Color {
+        guard let host = detectedSiteHost else { return .secondary }
+        if host.contains("youtube.com") || host.contains("youtu.be") { return .red }
+        if host.contains("vimeo.com") { return .cyan }
+        if host.contains("twitter.com") || host.contains("x.com") { return .blue }
+        if host.contains("tiktok.com") { return .pink }
+        if host.contains("instagram.com") { return .purple }
+        if host.contains("reddit.com") { return .orange }
+        if host.contains("twitch.tv") { return .purple }
+        if host.contains("soundcloud.com") { return .orange }
+        if host.contains("facebook.com") || host.contains("fb.watch") { return .blue }
+        return .secondary
+    }
+
+    private func submitDownload() {
+        let trimmed = urlInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        guard isValidDownloadURL(trimmed) else {
+            showInvalidURLAlert = true
+            return
+        }
+
+        guard manager.isYtdlpInstalled else {
+            showInstallAlert = true
+            return
+        }
+
+        // License check: daily download limit
+        if !license.canDownload {
+            upgradeReason = .dailyLimitReached
+            showUpgradePrompt = true
+            return
+        }
+
+        // Prevent duplicate active downloads
+        if manager.isDuplicate(url: trimmed) {
+            showDuplicateAlert = true
+            return
+        }
+
+        // Auto-detect playlist URLs (contain list= param), or use the toggle
+        let isPlaylistURL = trimmed.contains("list=") || trimmed.contains("/playlist?")
+        if downloadPlaylist || isPlaylistURL {
+            if !license.hasFullAccess {
+                upgradeReason = .playlistDisabled
+                showUpgradePrompt = true
+                return
+            }
+            pendingPlaylistURL = trimmed
+            pendingPlaylistItemCount = 0
+            showPlaylistConfirm = true
+        } else {
+            manager.addDownload(
+                url: trimmed,
+                quality: selectedQuality,
+                format: selectedFormat,
+                subtitles: downloadSubtitles,
+                playlistDownload: false
+            )
+            license.recordDownload()
+        }
+        urlInput = ""
+    }
+
+    private func startPlaylistDownload(url: String) {
+        manager.addPlaylistDownload(
+            url: url,
+            quality: selectedQuality,
+            format: selectedFormat,
+            subtitles: downloadSubtitles
+        )
+    }
+
+    private func isValidDownloadURL(_ string: String) -> Bool {
+        guard let url = URL(string: string),
+              let scheme = url.scheme?.lowercased(),
+              (scheme == "http" || scheme == "https"),
+              let host = url.host, host.contains(".")
+        else { return false }
+        return true
+    }
+
+    // MARK: - Import/Export
+
+    private func exportQueue() {
+        guard let data = manager.exportQueue() else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "download-queue.json"
+        if panel.runModal() == .OK, let url = panel.url {
+            try? data.write(to: url)
+        }
+    }
+
+    private func importQueue() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.json]
+        if panel.runModal() == .OK, let url = panel.url, let data = try? Data(contentsOf: url) {
+            manager.importQueue(from: data)
+        }
+    }
+
+    // MARK: - Drag & Drop
+
+    private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        if let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.url.identifier) }) {
+            provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { item, _ in
+                DispatchQueue.main.async {
+                    if let url = item as? URL {
+                        self.urlInput = url.absoluteString
+                    } else if let data = item as? Data, let urlStr = String(data: data, encoding: .utf8) {
+                        self.urlInput = urlStr.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+            }
+            return true
+        }
+        if let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) }) {
+            provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { item, _ in
+                DispatchQueue.main.async {
+                    if let str = item as? String {
+                        self.urlInput = str.trimmingCharacters(in: .whitespacesAndNewlines)
+                    } else if let data = item as? Data, let str = String(data: data, encoding: .utf8) {
+                        self.urlInput = str.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
+                }
+            }
+            return true
+        }
+        return false
+    }
+}
+
+// MARK: - Extracted Subviews
+
+struct HeaderBarView: View {
+    let activeCount: Int
+    let hasActiveDownloads: Bool
+    let hasPausedItems: Bool
+    let totalBandwidth: String?
+    let onSettingsTapped: () -> Void
+    let onPauseAll: () -> Void
+    let onResumeAll: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color.red)
+                Text("Star Video Downloader")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+            }
+
+            Spacer()
+
+            if activeCount > 0 {
+                Label("\(activeCount) active", systemImage: "arrow.down.circle")
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.blue.opacity(0.15))
+                    .foregroundStyle(Color.blue)
+                    .clipShape(Capsule())
+            }
+
+            if let bandwidth = totalBandwidth {
+                Text(bandwidth)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.green.opacity(0.15))
+                    .foregroundStyle(Color.green)
+                    .clipShape(Capsule())
+            }
+
+            if hasActiveDownloads {
+                Button {
+                    onPauseAll()
+                } label: {
+                    Image(systemName: "pause.circle")
+                        .font(.system(size: 15))
+                }
+                .buttonStyle(.plain)
+                .help("Pause All")
+                .accessibilityLabel("Pause all downloads")
+            }
+
+            if hasPausedItems {
+                Button {
+                    onResumeAll()
+                } label: {
+                    Image(systemName: "play.circle")
+                        .font(.system(size: 15))
+                }
+                .buttonStyle(.plain)
+                .help("Resume All")
+                .accessibilityLabel("Resume all downloads")
+            }
+
+            Button {
+                onSettingsTapped()
+            } label: {
+                Image(systemName: "gear")
+                    .font(.system(size: 15))
+            }
+            .buttonStyle(.plain)
+            .help("Settings")
+            .accessibilityLabel("Settings")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+}
+
+struct TabBarView: View {
+    @Binding var selectedTab: AppTab
+    @Environment(LicenseManager.self) private var license
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(AppTab.allCases, id: \.self) { tab in
+                Button {
+                    selectedTab = tab
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 12))
+                        Text(tab.rawValue)
+                            .font(.system(size: 12, weight: .medium))
+                        if tab == .convert && !license.hasFullAccess {
+                            Text("(Pro)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(selectedTab == tab ? Color.accentColor.opacity(0.12) : Color.clear)
+                    .foregroundStyle(selectedTab == tab ? Color.accentColor : .secondary)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.rawValue)
+                .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+}
+
+// MARK: - Button Styles
+
+struct PrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(configuration.isPressed ? Color.red.opacity(0.8) : Color.red)
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct SecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(configuration.isPressed ? Color(NSColor.controlBackgroundColor).opacity(0.7) : Color(NSColor.controlBackgroundColor))
+            .foregroundStyle(Color.primary)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
     }
 }
 
 #Preview {
     ContentView()
+        .environment(DownloadManager(settings: SettingsManager()))
+        .environment(LicenseManager())
 }
