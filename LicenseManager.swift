@@ -167,14 +167,6 @@ class LicenseManager {
             let success = json["success"] as? Bool ?? false
 
             if httpResponse.statusCode == 200 && success {
-                // Verify it's for the right product
-                if let purchase = json["purchase"] as? [String: Any] {
-                    let productPermalink = purchase["product_permalink"] as? String ?? ""
-                    if !productPermalink.isEmpty && !productPermalink.contains(Self.gumroadProductID) {
-                        lastError = "License key is not for this product."
-                        return .invalidKey
-                    }
-                }
 
                 licenseKey = trimmedKey
                 instanceID = trimmedKey // Gumroad uses the key itself as the identifier
