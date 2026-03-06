@@ -119,10 +119,63 @@
             "@type": "Answer",
             "text": "After purchasing, you'll receive your license key via email instantly. Just paste it into the app's Settings to unlock Pro."
           }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I download YouTube playlists?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, with a Pro license. Paste the playlist URL and Star Video Downloader will queue all videos automatically."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I download audio only as MP3?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Star Video Downloader can extract audio and save it as MP3, AAC, FLAC, or other audio formats using the built-in conversion tool."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Star Video Downloader safe to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. It is a native macOS app that does not collect personal data, does not require an account, and all downloads happen directly on your Mac."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is Star Video Downloader different from yt-dlp?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Star Video Downloader is a native macOS graphical interface built on top of yt-dlp and ffmpeg. You get all the power of yt-dlp without needing Terminal."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I download videos from Instagram or TikTok?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Star Video Downloader supports Instagram Reels, TikTok videos, Twitter/X videos, Reddit videos, and hundreds of other platforms — not just YouTube."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the video repair tool?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The Pro video repair tool fixes corrupted, truncated, or unplayable video files using a multi-stage repair pipeline. It works entirely offline and handles missing moov atoms, broken indexes, corrupt frames, and audio desync."
+          }
         }
       ]
     }
     </script>
+
+    <!-- Performance hints -->
+    <link rel="preconnect" href="https://www.googletagmanager.com">
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+    <link rel="preconnect" href="https://firaskam.gumroad.com">
 
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="stylesheet" href="style.css">
@@ -179,6 +232,27 @@
         <div class="container">
             <div class="screenshot-wrapper">
                 <img src="screenshot.png" alt="Star Video Downloader macOS app screenshot showing download queue with YouTube videos" class="app-screenshot" loading="lazy" width="1200" height="750">
+            </div>
+        </div>
+    </section>
+
+    <!-- SEO: Keyword-rich intro text -->
+    <section class="intro-text">
+        <div class="container">
+            <div class="intro-text-inner">
+                <p>
+                    <strong>Star Video Downloader</strong> is a free, native macOS app that makes it simple to
+                    download videos from <strong>YouTube</strong>, Vimeo, Twitter/X, TikTok, Instagram, Reddit, Twitch,
+                    and over <strong>1,000 other websites</strong>. Unlike browser extensions or web-based tools, Star Video Downloader
+                    runs entirely offline — your videos never touch a third-party server.
+                </p>
+                <p>
+                    Built with Swift and optimized for <strong>Apple Silicon</strong> (M1, M2, M3, M4) and Intel Macs,
+                    the app is lightweight and fast. The free tier is genuinely useful — no hidden timers, no watermarks.
+                    The <strong>Pro upgrade costs just $5 one-time</strong> and unlocks 8K quality, unlimited downloads,
+                    batch URL input, playlist support, video conversion, and a built-in <strong>video repair tool</strong>
+                    that fixes corrupted or unplayable video files — all without uploading anything to the cloud.
+                </p>
             </div>
         </div>
     </section>
@@ -440,11 +514,43 @@
                 </div>
                 <div class="faq-item">
                     <h3>Is this a good 4K Video Downloader alternative?</h3>
-                    <p>Yes. Star Video Downloader supports the same sites, offers 8K quality, and costs just $5 one-time — cheaper than most alternatives with no subscription.</p>
+                    <p>Yes. Star Video Downloader supports the same sites, offers 8K quality, and costs just $5 one-time — cheaper than most alternatives with no subscription. <a href="/vs-4k-video-downloader" style="color:var(--blue-600);">See the full comparison →</a></p>
                 </div>
                 <div class="faq-item">
                     <h3>Does it work on Apple Silicon (M1/M2/M3/M4)?</h3>
                     <p>Yes. Star Video Downloader runs natively on Apple Silicon Macs as well as Intel Macs.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Can I download YouTube playlists?</h3>
+                    <p>Yes, with a Pro license. Paste the playlist URL and Star Video Downloader will queue all videos automatically. You can also choose which items to skip.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Can I download audio only (MP3)?</h3>
+                    <p>Yes. Star Video Downloader can extract audio and save it as MP3, AAC, FLAC, or other audio formats using the built-in conversion tool.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Is it safe to use?</h3>
+                    <p>Yes. Star Video Downloader is a native macOS app distributed as a signed binary. It does not collect personal data, does not require an account, and all downloads happen directly on your Mac.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>What video formats can I download in?</h3>
+                    <p>You can download in MP4, MKV, WebM, and more. The conversion tool also lets you convert between MP4, MKV, MOV, WebM, AVI, and extract audio as MP3, M4A, FLAC, WAV, and others.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Does it support SponsorBlock?</h3>
+                    <p>Yes. With a Pro license, Star Video Downloader integrates SponsorBlock to automatically skip or remove sponsored segments from downloaded YouTube videos.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>What is the video repair tool?</h3>
+                    <p>The Pro video repair tool can fix corrupted, truncated, or unplayable video files using a multi-stage ffmpeg repair pipeline. It works entirely offline — no uploading files to any server. It handles missing moov atoms, broken indexes, corrupt frames, and audio desync issues.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>How is this different from yt-dlp?</h3>
+                    <p>Star Video Downloader is a native macOS graphical interface built on top of yt-dlp and ffmpeg. You get all the power of yt-dlp without needing Terminal — just paste a URL and click download.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Can I download videos from Instagram or TikTok?</h3>
+                    <p>Yes. Star Video Downloader supports Instagram Reels, TikTok videos, Twitter/X videos, Reddit videos, and hundreds of other platforms — not just YouTube.</p>
                 </div>
             </div>
         </div>
