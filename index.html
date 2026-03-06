@@ -203,12 +203,12 @@
     <section class="hero">
         <div class="container hero-container">
             <div class="hero-content">
-                <h1>Download Any Video.<br><span class="gradient-text">Effortlessly.</span></h1>
-                <p class="hero-subtitle">
+                <h1 class="reveal">Download Any Video.<br><span class="gradient-text">Effortlessly.</span></h1>
+                <p class="hero-subtitle reveal reveal-delay-1">
                     A powerful macOS app that lets you download videos from YouTube and 1000+ sites
                     in up to 8K quality. Fast, simple, and built for your Mac.
                 </p>
-                <div class="hero-buttons">
+                <div class="hero-buttons reveal reveal-delay-2">
                     <a href="https://github.com/starstudio-hash/starvideodownloader/releases/download/starvideodownloader1/Star.Video.Downloader.zip" class="btn btn-primary btn-lg">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -253,6 +253,30 @@
                     batch URL input, playlist support, video conversion, and a built-in <strong>video repair tool</strong>
                     that fixes corrupted or unplayable video files — all without uploading anything to the cloud.
                 </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item reveal">
+                    <div class="stat-number" data-target="1000" data-suffix="+">0+</div>
+                    <div class="stat-label">Supported Sites</div>
+                </div>
+                <div class="stat-item reveal reveal-delay-1">
+                    <div class="stat-number" data-target="8" data-suffix="K">8K</div>
+                    <div class="stat-label">Max Video Quality</div>
+                </div>
+                <div class="stat-item reveal reveal-delay-2">
+                    <div class="stat-number" data-target="5" data-prefix="$">$5</div>
+                    <div class="stat-label">Pro — One-Time Price</div>
+                </div>
+                <div class="stat-item reveal reveal-delay-3">
+                    <div class="stat-number" data-target="6" data-suffix=" stages">6 stages</div>
+                    <div class="stat-label">Video Repair Pipeline</div>
+                </div>
             </div>
         </div>
     </section>
@@ -684,6 +708,111 @@
             </div>
         </div>
     </section>
+
+    <!-- Animations + Interactivity -->
+    <script>
+    (function() {
+        // ── Scroll reveal ──────────────────────────────────────────
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // ── Auto-add reveal to section titles & cards ──────────────
+        const autoReveal = [
+            '.section-title',
+            '.section-subtitle',
+            '.feature-card',
+            '.pricing-card',
+            '.step',
+            '.faq-item',
+            '.contact-info-item',
+        ];
+        autoReveal.forEach(selector => {
+            document.querySelectorAll(selector).forEach((el, i) => {
+                if (!el.classList.contains('reveal')) {
+                    el.classList.add('reveal');
+                    // stagger siblings
+                    const delay = (i % 4);
+                    if (delay > 0) el.classList.add('reveal-delay-' + delay);
+                    revealObserver.observe(el);
+                }
+            });
+        });
+
+        // ── Navbar shadow on scroll ────────────────────────────────
+        const navbar = document.querySelector('.navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 10);
+        }, { passive: true });
+
+        // ── Animated stat counters ────────────────────────────────
+        function animateCounter(el) {
+            const target = parseInt(el.dataset.target, 10);
+            const prefix = el.dataset.prefix || '';
+            const suffix = el.dataset.suffix || '';
+            const duration = 1400;
+            const startTime = performance.now();
+
+            function update(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // ease-out cubic
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = Math.round(eased * target);
+                el.textContent = prefix + current.toLocaleString() + suffix;
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        const statObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter(entry.target);
+                    statObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        document.querySelectorAll('.stat-number[data-target]').forEach(el => {
+            statObserver.observe(el);
+        });
+
+        // ── Button press ripple ────────────────────────────────────
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const rect = btn.getBoundingClientRect();
+                const ripple = document.createElement('span');
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.cssText = `
+                    position:absolute; border-radius:50%;
+                    width:${size}px; height:${size}px;
+                    left:${e.clientX - rect.left - size/2}px;
+                    top:${e.clientY - rect.top - size/2}px;
+                    background:rgba(255,255,255,0.3);
+                    transform:scale(0); animation:ripple 0.5s ease-out forwards;
+                    pointer-events:none;
+                `;
+                btn.style.position = 'relative';
+                btn.style.overflow = 'hidden';
+                btn.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+    })();
+    </script>
+    <style>
+        @keyframes ripple {
+            to { transform: scale(2.5); opacity: 0; }
+        }
+    </style>
 
     <!-- Footer -->
     <footer class="footer">
