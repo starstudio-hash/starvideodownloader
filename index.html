@@ -11,8 +11,118 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Star Video Downloader — Download Videos from YouTube & 1000+ Sites</title>
-    <meta name="description" content="Star Video Downloader is a powerful macOS app to download videos from YouTube and hundreds of other sites in up to 8K quality.">
+    <title>Star Video Downloader — Free YouTube Video Downloader for Mac | Up to 8K Quality</title>
+    <meta name="description" content="Star Video Downloader is a free native macOS app to download videos from YouTube and 1000+ sites in up to 8K quality. Free tier available. Pro upgrade just $5 one-time.">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://starvideoapp.com/">
+    <meta property="og:title" content="Star Video Downloader — Free YouTube Video Downloader for Mac">
+    <meta property="og:description" content="Download videos from YouTube and 1000+ sites in up to 8K quality. Native macOS app. Free to use. Pro upgrade just $5 one-time — no subscription.">
+    <meta property="og:image" content="https://starvideoapp.com/screenshot.png">
+    <meta property="og:site_name" content="Star Video Downloader">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://starvideoapp.com/">
+    <meta name="twitter:title" content="Star Video Downloader — Free YouTube Video Downloader for Mac">
+    <meta name="twitter:description" content="Download videos from YouTube and 1000+ sites in up to 8K quality. Native macOS app. Free to use. Pro upgrade just $5 one-time.">
+    <meta name="twitter:image" content="https://starvideoapp.com/screenshot.png">
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://starvideoapp.com/">
+
+    <!-- Schema: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Star Video Downloader",
+      "operatingSystem": "macOS",
+      "applicationCategory": "MultimediaApplication",
+      "offers": [
+        {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "name": "Free"
+        },
+        {
+          "@type": "Offer",
+          "price": "5",
+          "priceCurrency": "USD",
+          "name": "Pro",
+          "url": "https://firaskam.gumroad.com/l/xxmkcc"
+        }
+      ],
+      "description": "A powerful native macOS app to download videos from YouTube and 1000+ sites in up to 8K quality. Includes video conversion, repair, batch downloads, SponsorBlock, and more.",
+      "url": "https://starvideoapp.com/",
+      "downloadUrl": "https://github.com/starstudio-hash/starvideodownloader/releases/download/starvideodownloader1/Star.Video.Downloader.zip",
+      "softwareVersion": "1.0",
+      "softwareRequirements": "macOS 14 or later",
+      "releaseNotes": "Initial release with download, conversion, and video repair features.",
+      "screenshot": "https://starvideoapp.com/screenshot.png"
+    }
+    </script>
+
+    <!-- Schema: FAQ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Star Video Downloader really free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The free version lets you download up to 5 videos per day in up to 1080p. No trial period, no expiration — free forever."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What sites does Star Video Downloader support?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Over 1000 sites including YouTube, Vimeo, Twitter/X, Reddit, Instagram, TikTok, Twitch, Dailymotion, and many more."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What macOS version do I need?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Star Video Downloader requires macOS 14 (Sonoma) or later. It runs natively on both Apple Silicon and Intel Macs."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the Pro license a subscription?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. It's a one-time payment of $5. Pay once, use forever. No recurring charges."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use Star Video Downloader Pro on multiple Macs?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Each Pro license can be activated on up to 3 Macs at the same time."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I get my license key after purchasing?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "After purchasing, you'll receive your license key via email instantly. Just paste it into the app's Settings to unlock Pro."
+          }
+        }
+      ]
+    }
+    </script>
+
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -22,7 +132,7 @@
     <nav class="navbar">
         <div class="container nav-container">
             <a href="#" class="logo">
-                <img src="icon.png" alt="Star Video Downloader" class="logo-icon">
+                <img src="icon.png" alt="Star Video Downloader logo" class="logo-icon" width="32" height="32">
                 <span>Star Video Downloader</span>
             </a>
             <div class="nav-links">
@@ -46,19 +156,19 @@
                 </p>
                 <div class="hero-buttons">
                     <a href="https://github.com/starstudio-hash/starvideodownloader/releases/download/starvideodownloader1/Star.Video.Downloader.zip" class="btn btn-primary btn-lg">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                             <polyline points="7 10 12 15 17 10"/>
                             <line x1="12" y1="15" x2="12" y2="3"/>
                         </svg>
-                        Download for macOS
+                        Download for macOS — Free
                     </a>
                     <a href="#features" class="btn btn-secondary btn-lg">See Features</a>
                 </div>
                 <p class="hero-note">Free to use &bull; macOS 14+ &bull; Apple Silicon & Intel</p>
             </div>
             <div class="hero-image">
-                <img src="icon.png" alt="Star Video Downloader App Icon" class="app-icon-hero">
+                <img src="icon.png" alt="Star Video Downloader app icon" class="app-icon-hero" width="180" height="180">
             </div>
         </div>
     </section>
@@ -67,7 +177,7 @@
     <section class="screenshot-section">
         <div class="container">
             <div class="screenshot-wrapper">
-                <img src="screenshot.png" alt="Star Video Downloader App Screenshot" class="app-screenshot">
+                <img src="screenshot.png" alt="Star Video Downloader macOS app screenshot showing download queue with YouTube videos" class="app-screenshot" loading="lazy" width="1200" height="750">
             </div>
         </div>
     </section>
@@ -93,12 +203,12 @@
     <section id="features" class="features">
         <div class="container">
             <h2 class="section-title">Everything You Need</h2>
-            <p class="section-subtitle">Download, convert, and manage your video library with one app.</p>
+            <p class="section-subtitle">Download, convert, repair, and manage your video library with one app.</p>
 
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
                             <line x1="8" y1="21" x2="16" y2="21"/>
                             <line x1="12" y1="17" x2="12" y2="21"/>
@@ -110,7 +220,7 @@
 
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                         </svg>
                     </div>
@@ -120,7 +230,7 @@
 
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <polygon points="23 7 16 12 23 17 23 7"/>
                             <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
                         </svg>
@@ -131,7 +241,7 @@
 
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <line x1="8" y1="6" x2="21" y2="6"/>
                             <line x1="8" y1="12" x2="21" y2="12"/>
                             <line x1="8" y1="18" x2="21" y2="18"/>
@@ -146,7 +256,7 @@
 
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"/>
                             <line x1="2" y1="12" x2="22" y2="12"/>
                             <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
@@ -158,12 +268,35 @@
 
                 <div class="feature-card">
                     <div class="feature-icon">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                         </svg>
                     </div>
                     <h3>SponsorBlock</h3>
                     <p>Automatically skip or remove sponsored segments from downloaded YouTube videos.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
+                    <h3>Video Repair</h3>
+                    <p>Fix corrupted or unplayable video files with a multi-stage repair pipeline. No file size limits, all offline.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                            <line x1="6" y1="6" x2="6.01" y2="6"/>
+                            <line x1="6" y1="18" x2="6.01" y2="18"/>
+                        </svg>
+                    </div>
+                    <h3>Native macOS App</h3>
+                    <p>Built in Swift, not Electron. Lightweight, fast, and feels right at home on your Mac.</p>
                 </div>
             </div>
         </div>
@@ -208,7 +341,7 @@
                     <div class="pricing-header">
                         <h3>Pro</h3>
                         <div class="price">$5</div>
-                        <p class="price-note">One-time payment</p>
+                        <p class="price-note">One-time payment — no subscription</p>
                     </div>
                     <ul class="pricing-features">
                         <li>
@@ -225,15 +358,19 @@
                         </li>
                         <li>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            Video conversion & processing
+                            Video conversion &amp; processing
                         </li>
                         <li>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            Batch URLs & playlists
+                            Batch URLs &amp; playlists
                         </li>
                         <li>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            SponsorBlock, subtitles & chapters
+                            SponsorBlock, subtitles &amp; chapters
+                        </li>
+                        <li>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                            Video repair tool
                         </li>
                         <li>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -300,6 +437,14 @@
                     <h3>How do I get my license key?</h3>
                     <p>After purchasing, you'll receive your license key via email instantly. Just paste it into the app's Settings to unlock Pro.</p>
                 </div>
+                <div class="faq-item">
+                    <h3>Is this a good 4K Video Downloader alternative?</h3>
+                    <p>Yes. Star Video Downloader supports the same sites, offers 8K quality, and costs just $5 one-time — cheaper than most alternatives with no subscription.</p>
+                </div>
+                <div class="faq-item">
+                    <h3>Does it work on Apple Silicon (M1/M2/M3/M4)?</h3>
+                    <p>Yes. Star Video Downloader runs natively on Apple Silicon Macs as well as Intel Macs.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -314,7 +459,7 @@
                 <div class="contact-info">
                     <div class="contact-info-item">
                         <div class="contact-info-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                                 <polyline points="22,6 12,13 2,6"/>
                             </svg>
@@ -326,7 +471,7 @@
                     </div>
                     <div class="contact-info-item">
                         <div class="contact-info-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10"/>
                                 <polyline points="12 6 12 12 16 14"/>
                             </svg>
@@ -338,7 +483,7 @@
                     </div>
                     <div class="contact-info-item">
                         <div class="contact-info-icon">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L2 21l1.9-6.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                             </svg>
                         </div>
@@ -375,7 +520,7 @@
                         <textarea id="message" name="message" rows="5" placeholder="Describe your issue or question…" required></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary btn-full">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                             <line x1="22" y1="2" x2="11" y2="13"/>
                             <polygon points="22 2 15 22 11 13 2 9 22 2"/>
                         </svg>
@@ -389,18 +534,18 @@
     <!-- Download Section -->
     <section id="download" class="download">
         <div class="container download-container">
-            <img src="icon.png" alt="Star Video Downloader" class="download-icon">
+            <img src="icon.png" alt="Star Video Downloader" class="download-icon" loading="lazy" width="80" height="80">
             <h2>Ready to Download?</h2>
             <p>Get Star Video Downloader for free. No account needed.</p>
             <a href="https://github.com/starstudio-hash/starvideodownloader/releases/download/starvideodownloader1/Star.Video.Downloader.zip" class="btn btn-primary btn-lg">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="7 10 12 15 17 10"/>
                     <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                Download for macOS
+                Download for macOS — Free
             </a>
-            <p class="download-note">Version 1.0 &bull; macOS 14+ &bull; 15 MB</p>
+            <p class="download-note">Version 1.0 &bull; macOS 14+ &bull; Apple Silicon &amp; Intel</p>
         </div>
     </section>
 
@@ -408,7 +553,7 @@
     <footer class="footer">
         <div class="container footer-container">
             <div class="footer-left">
-                <img src="icon.png" alt="Star Video Downloader" class="footer-icon">
+                <img src="icon.png" alt="Star Video Downloader" class="footer-icon" loading="lazy" width="24" height="24">
                 <span>Star Video Downloader</span>
             </div>
             <div class="footer-right">

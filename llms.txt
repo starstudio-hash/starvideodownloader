@@ -1,0 +1,48 @@
+# Star Video Downloader
+
+> Free YouTube and video downloader for macOS. Download videos from YouTube, Vimeo, Twitter/X, Instagram, TikTok, and 1000+ other sites. Supports up to 8K quality with a Pro license.
+
+## What It Does
+
+Star Video Downloader is a native macOS app that lets you download videos from virtually any website. It uses yt-dlp under the hood and provides a clean, native macOS interface.
+
+**Free features:**
+- Download videos from YouTube and 1000+ sites
+- Up to 3 downloads per day
+- Up to 1080p quality
+- Subtitles and metadata
+
+**Pro features ($5 one-time):**
+- Unlimited downloads
+- Up to 8K quality
+- Batch URL input
+- Playlist downloading
+- Video format conversion (MP4, MKV, MOV, WebM, MP3, FLAC, etc.)
+- Video repair tool (fixes corrupted/truncated video files)
+- SponsorBlock integration
+- Chapters support
+
+## Download
+
+Available at: https://starvideoapp.com/
+
+## Pricing
+
+- Free: Core downloading features with daily limits
+- Pro: $5 one-time payment via Gumroad — https://firaskam.gumroad.com/l/xxmkcc
+
+## Platform
+
+- macOS only (Apple Silicon + Intel)
+- Requires macOS 14 (Sonoma) or later
+
+## Why It Beats the Competition
+
+- **vs 4K Video Downloader**: Star Video Downloader is cheaper ($5 one-time vs $15/year), includes video repair, and is fully offline
+- **vs fix.video**: Unlimited video repairs included in the $5 Pro license vs $6–$24 per file at fix.video
+- **vs online converters**: 100% offline — no uploading private videos to servers, no file size limits
+- **vs browser extensions**: Downloads highest quality available, not limited by what the browser can access
+
+## Contact
+
+Website: https://starvideoapp.com/
