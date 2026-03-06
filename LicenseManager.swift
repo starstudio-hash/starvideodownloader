@@ -29,8 +29,8 @@ class LicenseManager {
     static let freeDailyDownloadLimit: Int = 5
     static let freeMaxConcurrentDownloads: Int = 1
 
-    /// Gumroad product permalink
-    static let gumroadProductID: String = "xxmkcc"
+    /// Gumroad product ID
+    static let gumroadProductID: String = "vdHfyiPVIE20rc3y7Rfc8g=="
 
     // MARK: - Persisted State
 
@@ -144,8 +144,13 @@ class LicenseManager {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        let body = "product_id=\(Self.gumroadProductID)&license_key=\(trimmedKey)&increment_uses_count=true"
-        request.httpBody = body.data(using: .utf8)
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "product_id", value: Self.gumroadProductID),
+            URLQueryItem(name: "license_key", value: trimmedKey),
+            URLQueryItem(name: "increment_uses_count", value: "true")
+        ]
+        request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -153,6 +158,10 @@ class LicenseManager {
             guard let httpResponse = response as? HTTPURLResponse else {
                 return .networkError("Invalid response")
             }
+
+            // Debug: log raw response
+            let rawResponse = String(data: data, encoding: .utf8) ?? ""
+            print("[LicenseManager] Gumroad response (\(httpResponse.statusCode)): \(rawResponse)")
 
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
             let success = json["success"] as? Bool ?? false
@@ -215,8 +224,13 @@ class LicenseManager {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-        let body = "product_id=\(Self.gumroadProductID)&license_key=\(licenseKey)&increment_uses_count=false"
-        request.httpBody = body.data(using: .utf8)
+        var components = URLComponents()
+        components.queryItems = [
+            URLQueryItem(name: "product_id", value: Self.gumroadProductID),
+            URLQueryItem(name: "license_key", value: licenseKey),
+            URLQueryItem(name: "increment_uses_count", value: "false")
+        ]
+        request.httpBody = components.percentEncodedQuery?.data(using: .utf8)
 
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
