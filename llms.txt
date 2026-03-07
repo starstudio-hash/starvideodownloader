@@ -37,6 +37,7 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - **vs Downie:** Star costs $5 vs $19.99. Star supports 1000+ sites vs ~30 for Downie. Star includes format conversion and video repair. Full comparison: https://starvideoapp.com/vs-downie
 - **vs fix.video:** Unlimited video repairs included in Star's $5 Pro license vs $6–$24 per file at fix.video. Star works offline with no file size limits.
 - **vs online converters:** 100% offline — no uploading private videos to servers, no file size limits, no waiting for server processing.
+- **vs ClipGrab:** Star is a native macOS app vs ClipGrab's Qt-based interface. Star supports 1000+ sites vs ClipGrab's handful. Star has no bundled software or ads. Full comparison: https://starvideoapp.com/vs-clipgrab
 - **vs browser extensions:** Downloads highest quality available (up to 8K), not limited by browser capabilities. Works reliably without breaking when sites update.
 
 ## Pages
@@ -47,6 +48,10 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - [How to Download Instagram Videos on Mac](https://starvideoapp.com/how-to-download-instagram-videos-mac): Guide for saving Instagram Reels, Stories, and posts on Mac
 - [Star Video Downloader vs 4K Video Downloader](https://starvideoapp.com/vs-4k-video-downloader): Feature and pricing comparison showing why Star is the better Mac alternative
 - [Star Video Downloader vs Downie](https://starvideoapp.com/vs-downie): Feature and pricing comparison with Downie for Mac
+- [How to Download Twitter/X Videos on Mac](https://starvideoapp.com/how-to-download-twitter-videos-mac): Guide for saving Twitter and X videos on macOS
+- [How to Convert Videos on Mac](https://starvideoapp.com/how-to-convert-videos-mac): Guide for converting video formats offline on Mac using ffmpeg
+- [How to Repair Corrupted Videos on Mac](https://starvideoapp.com/how-to-repair-corrupted-videos-mac): Guide for fixing broken, corrupted, or unplayable video files on Mac
+- [Star Video Downloader vs ClipGrab](https://starvideoapp.com/vs-clipgrab): Feature comparison showing why Star is the better ClipGrab alternative for Mac
 
 ## Frequently Asked Questions
 
