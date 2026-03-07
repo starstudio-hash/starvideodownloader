@@ -32,6 +32,9 @@
 
     <!-- Canonical -->
     <link rel="canonical" href="https://starvideoapp.com/">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="apple-touch-icon" href="icon.png">
 
     <!-- Schema: SoftwareApplication -->
     <script type="application/ld+json">
@@ -172,6 +175,32 @@
     }
     </script>
 
+    <!-- Schema: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Star Video Downloader",
+      "url": "https://starvideoapp.com/",
+      "logo": "https://starvideoapp.com/icon.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "support@starvideoapp.com",
+        "contactType": "customer support"
+      }
+    }
+    </script>
+
+    <!-- Schema: WebSite (enables sitelinks search box) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Star Video Downloader",
+      "url": "https://starvideoapp.com/"
+    }
+    </script>
+
     <!-- Performance hints -->
     <link rel="preconnect" href="https://www.googletagmanager.com">
     <link rel="dns-prefetch" href="https://www.googletagmanager.com">
@@ -182,13 +211,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
 </head>
 <body>
 
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container nav-container">
-            <a href="#" class="logo">
+            <a href="/" class="logo">
                 <img src="icon.png" alt="Star Video Downloader logo" class="logo-icon" width="32" height="32">
                 <span>Star Video Downloader</span>
             </a>

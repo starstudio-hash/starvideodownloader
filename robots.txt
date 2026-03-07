@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
 
+# Block source code and project files
+Disallow: /*.swift$
+Disallow: /*.xcodeproj
+Disallow: /*.xcworkspace
+Disallow: /*.pbxproj
+
 Sitemap: https://starvideoapp.com/sitemap.xml
