@@ -38,6 +38,8 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - **vs fix.video:** Unlimited video repairs included in Star's $5 Pro license vs $6–$24 per file at fix.video. Star works offline with no file size limits.
 - **vs online converters:** 100% offline — no uploading private videos to servers, no file size limits, no waiting for server processing.
 - **vs ClipGrab:** Star is a native macOS app vs ClipGrab's Qt-based interface. Star supports 1000+ sites vs ClipGrab's handful. Star has no bundled software or ads. Full comparison: https://starvideoapp.com/vs-clipgrab
+- **vs yt-dlp (CLI):** Star is built on yt-dlp — same engine, but with a native macOS GUI. No Terminal needed. Includes visual progress, batch queue, format conversion, and video repair. Full comparison: https://starvideoapp.com/vs-yt-dlp
+- **vs JDownloader:** Star is a native macOS app vs JDownloader's Java-based interface. No Java dependency, no CAPTCHAs, no bloated UI. Focused on video with conversion and repair tools. Full comparison: https://starvideoapp.com/vs-jdownloader
 - **vs browser extensions:** Downloads highest quality available (up to 8K), not limited by browser capabilities. Works reliably without breaking when sites update.
 
 ## Pages
@@ -52,6 +54,14 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - [How to Convert Videos on Mac](https://starvideoapp.com/how-to-convert-videos-mac): Guide for converting video formats offline on Mac using ffmpeg
 - [How to Repair Corrupted Videos on Mac](https://starvideoapp.com/how-to-repair-corrupted-videos-mac): Guide for fixing broken, corrupted, or unplayable video files on Mac
 - [Star Video Downloader vs ClipGrab](https://starvideoapp.com/vs-clipgrab): Feature comparison showing why Star is the better ClipGrab alternative for Mac
+- [How to Extract Audio from YouTube on Mac](https://starvideoapp.com/how-to-extract-audio-youtube-mac): Guide for converting YouTube videos to MP3, FLAC, WAV, and other audio formats on Mac
+- [Best YouTube Video Downloader for Mac in 2026](https://starvideoapp.com/best-youtube-video-downloader-mac): Top 5 Mac video downloaders compared — features, pricing, and recommendations
+- [How to Download Reddit Videos on Mac](https://starvideoapp.com/how-to-download-reddit-videos-mac): Guide for saving Reddit videos with audio on macOS
+- [How to Download YouTube Shorts on Mac](https://starvideoapp.com/how-to-download-youtube-shorts-mac): Guide for saving YouTube Shorts as video files on Mac
+- [How to Download Vimeo Videos on Mac](https://starvideoapp.com/how-to-download-vimeo-videos-mac): Guide for downloading Vimeo videos including embedded players on Mac
+- [Star Video Downloader vs yt-dlp](https://starvideoapp.com/vs-yt-dlp): Comparison of Star Video Downloader GUI vs yt-dlp command line for Mac
+- [How to Download Facebook Videos on Mac](https://starvideoapp.com/how-to-download-facebook-videos-mac): Guide for saving Facebook videos and Reels on macOS
+- [Star Video Downloader vs JDownloader](https://starvideoapp.com/vs-jdownloader): Feature comparison showing why Star is the better JDownloader alternative for Mac video downloads
 
 ## Frequently Asked Questions
 
