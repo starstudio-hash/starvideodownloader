@@ -62,6 +62,14 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - [Star Video Downloader vs yt-dlp](https://starvideoapp.com/vs-yt-dlp): Comparison of Star Video Downloader GUI vs yt-dlp command line for Mac
 - [How to Download Facebook Videos on Mac](https://starvideoapp.com/how-to-download-facebook-videos-mac): Guide for saving Facebook videos and Reels on macOS
 - [Star Video Downloader vs JDownloader](https://starvideoapp.com/vs-jdownloader): Feature comparison showing why Star is the better JDownloader alternative for Mac video downloads
+- [How to Download Twitch Clips on Mac](https://starvideoapp.com/how-to-download-twitch-clips-mac): Guide for saving Twitch clips, VODs, and highlights on macOS
+- [How to Download Dailymotion Videos on Mac](https://starvideoapp.com/how-to-download-dailymotion-videos-mac): Guide for downloading Dailymotion videos in HD on Mac
+- [How to Download 4K & 8K Videos on Mac](https://starvideoapp.com/how-to-download-4k-videos-mac): Guide for downloading 4K, 8K, and HDR videos on Mac
+- [How to Download YouTube Playlists on Mac](https://starvideoapp.com/how-to-download-youtube-playlist-mac): Guide for batch downloading entire YouTube playlists on Mac
+- [How to Download Unlisted YouTube Videos on Mac](https://starvideoapp.com/how-to-download-private-youtube-videos-mac): Guide for downloading unlisted, age-restricted, and members-only YouTube videos
+- [MP4 vs MKV vs WebM — Video Format Comparison](https://starvideoapp.com/mp4-vs-mkv-vs-webm): Comparison of video container formats for Mac users
+- [How to Download Streaming Video on Mac](https://starvideoapp.com/how-to-download-streaming-video-mac): Guide for saving HLS and DASH streaming videos on macOS
+- [How to Download Embedded Videos on Mac](https://starvideoapp.com/how-to-download-embedded-videos-mac): Guide for downloading embedded videos from any website on Mac
 
 ## Frequently Asked Questions
 
