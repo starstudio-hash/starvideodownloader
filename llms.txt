@@ -1,6 +1,6 @@
 # Star Video Downloader
 
-> Star Video Downloader is a native macOS app for downloading videos from YouTube, TikTok, Instagram, Twitter/X, Vimeo, and 1000+ other websites. It supports 4K/8K quality, batch downloads, format conversion, and video repair — all offline with no accounts or subscriptions required. Free tier available; Pro is $5 one-time.
+> Star Video Downloader is a native macOS app for downloading videos from YouTube, TikTok, Instagram, Twitter/X, Vimeo, and 1000+ other websites. It supports 4K/8K quality, batch downloads, format conversion, and video repair. The app works locally on Mac without accounts or subscriptions. Free tier available; Pro is $5 one-time.
 
 ## Overview
 
@@ -12,7 +12,7 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - **Pricing:** Free tier (up to 1080p, 5 downloads/day) and Pro ($5 one-time, unlimited quality + features)
 - **Supported sites:** YouTube, TikTok, Instagram, Twitter/X, Vimeo, Facebook, Reddit, Twitch, Dailymotion, and 1000+ more
 - **Max quality:** Up to 8K with HDR support
-- **Privacy:** 100% offline processing, no analytics, no accounts, no data collection
+- **Privacy:** The app processes downloads locally on your Mac with no account requirement. The website uses analytics for site measurement.
 - **Download:** Available at https://starvideoapp.com/
 - **Purchase Pro:** https://firaskam.gumroad.com/l/xxmkcc
 
@@ -45,6 +45,8 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 ## Pages
 
 - [Homepage](https://starvideoapp.com/): Main landing page with features, interactive demo, pricing, FAQ, and download links
+- [Guides Hub](https://starvideoapp.com/guides): Topic hub for Mac download, playlist, conversion, audio extraction, and repair tutorials
+- [Comparisons Hub](https://starvideoapp.com/comparisons): Topic hub for Star Video Downloader alternative and competitor comparison pages
 - [How to Download YouTube Videos on Mac](https://starvideoapp.com/how-to-download-youtube-videos-mac): Step-by-step guide for saving YouTube videos using Star Video Downloader
 - [How to Download TikTok Videos on Mac](https://starvideoapp.com/how-to-download-tiktok-videos-mac): Guide for downloading TikTok videos without watermarks on macOS
 - [How to Download Instagram Videos on Mac](https://starvideoapp.com/how-to-download-instagram-videos-mac): Guide for saving Instagram Reels, Stories, and posts on Mac
