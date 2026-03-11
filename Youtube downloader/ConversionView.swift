@@ -303,23 +303,46 @@ struct ConversionView: View {
     private var conversionList: some View {
         VStack(spacing: 0) {
             // Toolbar
-            HStack {
-                Text("\(conversionManager.items.count) file\(conversionManager.items.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(conversionManager.items.count) file\(conversionManager.items.count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        summaryBadge("Running", value: conversionManager.convertingItemCount, tint: .orange)
+                        summaryBadge("Waiting", value: conversionManager.waitingItemCount, tint: .secondary)
+                        summaryBadge("Done", value: conversionManager.completedItemCount, tint: .green)
+                        summaryBadge("Failed", value: conversionManager.failedItemCount, tint: .red)
+                    }
+                }
 
                 Spacer()
 
-                Button("Clear Completed") {
-                    conversionManager.items.removeAll {
-                        if case .completed = $0.status { return true }
-                        if case .cancelled = $0.status { return true }
-                        return false
+                HStack(spacing: 12) {
+                    if conversionManager.failedItemCount > 0 {
+                        Button("Retry Failed") {
+                            conversionManager.retryFailedItems()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption)
+                        .foregroundStyle(Color.orange)
+
+                        Button("Remove Failed") {
+                            conversionManager.removeFailedItems()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption)
+                        .foregroundStyle(Color.red)
                     }
+
+                    Button("Clear Finished") {
+                        conversionManager.clearFinishedItems()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
                 }
-                .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(Color.accentColor)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
@@ -446,6 +469,17 @@ struct ConversionView: View {
             selectedPreset = preset
             applyPreset(preset)
         }
+    }
+
+    private func summaryBadge(_ label: String, value: Int, tint: Color) -> some View {
+        Text("\(label) \(value)")
+            .font(.caption2)
+            .fontWeight(.medium)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(tint.opacity(0.12))
+            .foregroundStyle(tint)
+            .clipShape(Capsule())
     }
 }
 

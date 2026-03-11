@@ -117,12 +117,7 @@ struct RepairView: View {
     }
 
     private var hasRepairableItems: Bool {
-        repairManager.items.contains { item in
-            if case .scanned(let severity) = item.status, severity != "None" {
-                return true
-            }
-            return false
-        }
+        repairManager.repairableItemCount > 0
     }
 
     // MARK: - Drop Zone
@@ -199,19 +194,47 @@ struct RepairView: View {
     private var repairList: some View {
         VStack(spacing: 0) {
             // Toolbar
-            HStack {
-                Text("\(repairManager.items.count) file\(repairManager.items.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(repairManager.items.count) file\(repairManager.items.count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 8) {
+                        summaryBadge("Active", value: repairManager.activeItemCount, tint: .orange)
+                        summaryBadge("Waiting", value: repairManager.waitingItemCount, tint: .secondary)
+                        summaryBadge("Repairable", value: repairManager.repairableItemCount, tint: .blue)
+                        summaryBadge("Failed", value: repairManager.failedItemCount, tint: .red)
+                        summaryBadge("Done", value: repairManager.completedItemCount, tint: .green)
+                    }
+                }
 
                 Spacer()
 
-                Button("Clear Completed") {
-                    repairManager.clearCompleted()
+                HStack(spacing: 12) {
+                    if repairManager.failedItemCount > 0 {
+                        Button("Retry Failed") {
+                            repairManager.retryFailedRepairs()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption)
+                        .foregroundStyle(Color.orange)
+
+                        Button("Remove Failed") {
+                            repairManager.removeFailedItems()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption)
+                        .foregroundStyle(Color.red)
+                    }
+
+                    Button("Clear Finished") {
+                        repairManager.clearCompleted()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
                 }
-                .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundStyle(Color.accentColor)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
@@ -273,6 +296,17 @@ struct RepairView: View {
             }
         }
         return true
+    }
+
+    private func summaryBadge(_ label: String, value: Int, tint: Color) -> some View {
+        Text("\(label) \(value)")
+            .font(.caption2)
+            .fontWeight(.medium)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(tint.opacity(0.12))
+            .foregroundStyle(tint)
+            .clipShape(Capsule())
     }
 }
 

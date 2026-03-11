@@ -152,6 +152,38 @@ class RepairManager {
         restorePersistedQueue()
     }
 
+    var waitingItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .waiting = item.status { count += 1 }
+        }
+    }
+
+    var activeItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if item.isActive { count += 1 }
+        }
+    }
+
+    var repairableItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .scanned(let severity) = item.status, severity != "None" {
+                count += 1
+            }
+        }
+    }
+
+    var completedItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .completed = item.status { count += 1 }
+        }
+    }
+
+    var failedItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .failed = item.status { count += 1 }
+        }
+    }
+
     // MARK: - Public API
 
     func addFiles(_ urls: [URL]) {
@@ -210,7 +242,6 @@ class RepairManager {
         items.removeAll {
             if case .completed = $0.status { return true }
             if case .cancelled = $0.status { return true }
-            if case .failed = $0.status { return true }
             return false
         }
         schedulePersistence()
@@ -226,6 +257,25 @@ class RepairManager {
 
     func startRepair(_ item: RepairItem) {
         enqueueOrStart(item)
+    }
+
+    func retryFailedRepairs() {
+        let failedItems = items.filter {
+            if case .failed = $0.status { return true }
+            return false
+        }
+        for item in failedItems {
+            retryRepair(item)
+        }
+        schedulePersistence()
+    }
+
+    func removeFailedItems() {
+        items.removeAll {
+            if case .failed = $0.status { return true }
+            return false
+        }
+        schedulePersistence()
     }
 
     // MARK: - Queue

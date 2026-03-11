@@ -126,6 +126,30 @@ class ConversionManager {
         restorePersistedQueue()
     }
 
+    var waitingItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .waiting = item.status { count += 1 }
+        }
+    }
+
+    var convertingItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .converting = item.status { count += 1 }
+        }
+    }
+
+    var completedItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .completed = item.status { count += 1 }
+        }
+    }
+
+    var failedItemCount: Int {
+        items.reduce(into: 0) { count, item in
+            if case .failed = item.status { count += 1 }
+        }
+    }
+
     // MARK: - Public API
 
     func addFiles(_ urls: [URL], videoCodec: VideoCodec, audioCodec: AudioCodec, quality: EncodingQuality, outputFormat: String, processingOptions: VideoProcessingOptions = VideoProcessingOptions(), audioOnly: Bool = false) {
@@ -173,6 +197,34 @@ class ConversionManager {
         item.status = .waiting
         item.outputPath = nil
         enqueueOrStart(item)
+        schedulePersistence()
+    }
+
+    func retryFailedItems() {
+        let failedItems = items.filter {
+            if case .failed = $0.status { return true }
+            return false
+        }
+        for item in failedItems {
+            retryConversion(item)
+        }
+        schedulePersistence()
+    }
+
+    func removeFailedItems() {
+        items.removeAll {
+            if case .failed = $0.status { return true }
+            return false
+        }
+        schedulePersistence()
+    }
+
+    func clearFinishedItems() {
+        items.removeAll {
+            if case .completed = $0.status { return true }
+            if case .cancelled = $0.status { return true }
+            return false
+        }
         schedulePersistence()
     }
 
