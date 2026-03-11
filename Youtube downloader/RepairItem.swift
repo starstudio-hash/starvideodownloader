@@ -86,7 +86,34 @@ class RepairItem: Identifiable {
         Resolution: \(resolution.isEmpty ? "Unknown" : resolution)
         Codec: \(codec.isEmpty ? "Unknown" : codec)
         Issues: \(issues)
+        Recommended next step: \(recommendedNextStep)
         Output: \(output)
         """
+    }
+
+    var diagnosticSummary: String {
+        if detectedIssues.isEmpty {
+            return "No structural issues detected during scan."
+        }
+        return detectedIssues.joined(separator: " · ")
+    }
+
+    var recommendedNextStep: String {
+        if detectedIssues.contains(where: { $0.localizedCaseInsensitiveContains("moov atom") }) {
+            return "Try Deep Repair. Missing moov atoms usually need a full rebuild or re-encode."
+        }
+        if detectedIssues.contains(where: { $0.localizedCaseInsensitiveContains("audio/video desync") }) {
+            return "Use Deep Repair to rebuild timestamps and resync audio."
+        }
+        if detectedIssues.contains(where: { $0.localizedCaseInsensitiveContains("corrupt frames") }) {
+            return "Quick Fix may help first, but Deep Repair is safer if playback still stutters."
+        }
+        if detectedIssues.contains(where: { $0.localizedCaseInsensitiveContains("missing frame references") }) {
+            return "Deep Repair is recommended because reference errors often require frame discard or re-encode."
+        }
+        if case .failed = status {
+            return "Try Deep Repair or inspect the original file source. Severe truncation may be unrecoverable."
+        }
+        return "Scan completed. Repair only if playback problems remain."
     }
 }

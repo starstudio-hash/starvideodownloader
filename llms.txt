@@ -49,6 +49,11 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - [Comparisons Hub](https://starvideoapp.com/comparisons): Topic hub for Star Video Downloader alternative and competitor comparison pages
 - [Pricing and License](https://starvideoapp.com/pricing): Free vs Pro breakdown, one-time $5 pricing, and license key details
 - [About Star Video Downloader](https://starvideoapp.com/about): Background on the native macOS app, tech stack, and support information
+- [Help](https://starvideoapp.com/help): Install instructions, Pro activation steps, damaged-app troubleshooting, and support bundle export info
+- [Release Notes](https://starvideoapp.com/release-notes): Recent app updates and release improvements
+- [Safety](https://starvideoapp.com/safety): How the app works locally, what it uses under the hood, and Gatekeeper guidance
+- [Privacy](https://starvideoapp.com/privacy): App privacy vs website analytics behavior
+- [Terms](https://starvideoapp.com/terms): Basic terms of use
 - [How to Download YouTube Videos on Mac](https://starvideoapp.com/how-to-download-youtube-videos-mac): Step-by-step guide for saving YouTube videos using Star Video Downloader
 - [How to Download TikTok Videos on Mac](https://starvideoapp.com/how-to-download-tiktok-videos-mac): Guide for downloading TikTok videos without watermarks on macOS
 - [How to Download Instagram Videos on Mac](https://starvideoapp.com/how-to-download-instagram-videos-mac): Guide for saving Instagram Reels, Stories, and posts on Mac
@@ -89,6 +94,7 @@ Yes. Star Video Downloader is a universal binary that runs natively on both Appl
 
 ### Is it safe and private?
 Yes. All processing happens locally on your Mac. The app does not collect analytics, require an account, or send any data to external servers. Videos are downloaded directly from the source to your computer.
+The website itself uses analytics for site measurement.
 
 ### Can I convert videos to other formats?
 Yes. The Pro version includes a built-in format converter powered by ffmpeg. You can convert to MP4, MOV, AVI, MKV, WebM, MP3, AAC, WAV, FLAC, and more.

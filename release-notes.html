@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Star Video Downloader Release Notes</title>
+    <meta name="description" content="See what changed in recent Star Video Downloader releases, including app improvements, workflow upgrades, and release packaging updates.">
+    <link rel="canonical" href="https://starvideoapp.com/release-notes">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://starvideoapp.com/release-notes">
+    <meta property="og:title" content="Star Video Downloader Release Notes">
+    <meta property="og:description" content="Recent app improvements, workflow upgrades, and release packaging changes.">
+    <meta property="og:image" content="https://starvideoapp.com/screenshot.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Star Video Downloader Release Notes">
+    <meta name="twitter:description" content="Recent app improvements, workflow upgrades, and release packaging changes.">
+    <meta name="twitter:image" content="https://starvideoapp.com/screenshot.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page-hero { background: linear-gradient(135deg, #111827 0%, #2563eb 100%); color: white; padding: 80px 0 56px; text-align: center; }
+        .page-hero h1 { font-size: clamp(30px, 4vw, 48px); margin: 0 0 14px; }
+        .page-hero p { max-width: 720px; margin: 0 auto; opacity: 0.86; font-size: 18px; line-height: 1.7; }
+        .page-section { padding: 72px 0; }
+        .page-section:nth-child(even) { background: var(--gray-50); }
+        .prose { max-width: 920px; margin: 0 auto; }
+        .release-card { background: white; border: 1px solid var(--gray-200); border-radius: 18px; padding: 28px; box-shadow: 0 10px 36px rgba(15, 23, 42, 0.06); margin-bottom: 24px; }
+        .release-card h2 { margin: 0 0 8px; font-size: 28px; }
+        .release-card p, .release-card li { color: var(--gray-600); line-height: 1.8; }
+        .release-meta { color: var(--gray-500); font-size: 14px; margin-bottom: 12px; }
+        .breadcrumb { padding: 16px 0; font-size: 14px; color: var(--gray-500); }
+        .breadcrumb a { color: var(--blue-600); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <img src="icon.png" alt="Star Video Downloader logo" class="logo-icon" width="32" height="32">
+                <span>Star Video Downloader</span>
+            </a>
+            <div class="nav-links">
+                <a href="/guides">Guides</a>
+                <a href="/comparisons">Comparisons</a>
+                <a href="/help">Help</a>
+                <a href="/pricing">Pricing</a>
+                <a href="https://github.com/starstudio-hash/starvideodownloader/releases/latest/download/Star.Video.Downloader.zip" class="btn btn-primary btn-sm">Download Free</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="page-hero">
+        <div class="container">
+            <h1>Release Notes</h1>
+            <p>A running log of meaningful product and release improvements so users can see what actually changed, not just that “something was updated.”</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">Home</a> &rsaquo; Release Notes
+        </nav>
+    </div>
+
+    <section class="page-section">
+        <div class="container prose">
+            <article class="release-card">
+                <h2>March 11, 2026</h2>
+                <div class="release-meta">Workflow, reliability, and release hardening update</div>
+                <ul>
+                    <li>Added always-visible Free / Pro status in the main app header.</li>
+                    <li>Added URL preflight so the app can inspect title, channel, duration, live status, and playlist details before enqueue.</li>
+                    <li>Added selectable playlist import instead of forcing “download all.”</li>
+                    <li>Improved duplicate detection so common tracking/query variations do not create accidental duplicates.</li>
+                    <li>Improved download path tracking to reduce wrong-file attachment after completion.</li>
+                    <li>Added startup license validation, clearer license state messaging, and a manual validate action.</li>
+                    <li>Added support-bundle export from Settings for faster troubleshooting.</li>
+                    <li>Added persistence for download, conversion, and repair queues across relaunches.</li>
+                    <li>Updated the website to use the latest GitHub release download URL instead of one hardcoded tag.</li>
+                </ul>
+            </article>
+
+            <article class="release-card">
+                <h2>Earlier 1.0 Launch Wave</h2>
+                <div class="release-meta">Core product release</div>
+                <ul>
+                    <li>Native Mac downloader built around <code>yt-dlp</code> and <code>ffmpeg</code>.</li>
+                    <li>Free tier with daily limits plus a one-time Pro upgrade.</li>
+                    <li>Conversion, repair, history, and stats tabs.</li>
+                    <li>Batch input, playlists, SponsorBlock, and queue controls.</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <img src="icon.png" alt="Star Video Downloader" class="footer-icon" loading="lazy" width="24" height="24">
+                <span>Star Video Downloader</span>
+            </div>
+            <div class="footer-right">
+                <a href="/">Home</a>
+                <a href="/help">Help</a>
+                <a href="/safety">Safety</a>
+                <a href="/privacy">Privacy</a>
+                <a href="mailto:support@starvideoapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

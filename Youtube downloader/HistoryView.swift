@@ -6,14 +6,39 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum HistoryTimeFilter: String, CaseIterable, Identifiable {
+    case all = "All Time"
+    case last7Days = "Last 7 Days"
+    case last30Days = "Last 30 Days"
+
+    var id: String { rawValue }
+}
+
 struct HistoryView: View {
     var manager: DownloadManager
     var historyManager: HistoryManager { manager.historyManager }
     @State private var searchQuery: String = ""
     @State private var showClearConfirm: Bool = false
+    @State private var timeFilter: HistoryTimeFilter = .all
+    @State private var formatFilter: String = "All Formats"
 
     private var filteredEntries: [HistoryEntry] {
-        historyManager.search(query: searchQuery)
+        historyManager.search(query: searchQuery).filter { entry in
+            let matchesFormat = formatFilter == "All Formats" || entry.format == formatFilter
+            let matchesTime = switch timeFilter {
+            case .all:
+                true
+            case .last7Days:
+                entry.date >= Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? .distantPast
+            case .last30Days:
+                entry.date >= Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? .distantPast
+            }
+            return matchesFormat && matchesTime
+        }
+    }
+
+    private var availableFormats: [String] {
+        ["All Formats"] + Array(Set(historyManager.entries.map(\.format))).sorted()
     }
 
     var body: some View {
@@ -33,6 +58,22 @@ struct HistoryView: View {
                 .background(Color(NSColor.textBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .frame(width: 200)
+
+                Picker("When", selection: $timeFilter) {
+                    ForEach(HistoryTimeFilter.allCases) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 120)
+
+                Picker("Format", selection: $formatFilter) {
+                    ForEach(availableFormats, id: \.self) { format in
+                        Text(format).tag(format)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 120)
 
                 Spacer()
 

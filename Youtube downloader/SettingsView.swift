@@ -80,7 +80,7 @@ struct SettingsView: View {
                                         .font(.system(.callout, design: .monospaced))
                                         .foregroundStyle(.secondary)
                                     Spacer()
-                                    Button("Deactivate") {
+                                    Button("Remove from This Mac") {
                                         Task { await license.deactivateLicense() }
                                     }
                                     .buttonStyle(SecondaryButtonStyle())
@@ -120,6 +120,28 @@ struct SettingsView: View {
                                 Text("Free: \(license.dailyDownloadsRemaining)/\(LicenseManager.freeDailyDownloadLimit) downloads remaining today")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                            }
+
+                            if let lastValidationMessage = license.lastValidationMessage, !lastValidationMessage.isEmpty {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(lastValidationMessage)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    if let lastValidationDate = license.lastValidationDate {
+                                        Text("Last checked: \(lastValidationDate.formatted(date: .abbreviated, time: .shortened))")
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                            }
+
+                            if !license.licenseKey.isEmpty {
+                                Button("Validate License Now") {
+                                    Task { _ = await license.validateLicense() }
+                                }
+                                .buttonStyle(.plain)
+                                .font(.caption)
+                                .foregroundStyle(Color.accentColor)
                             }
                         }
                     }
@@ -921,15 +943,37 @@ struct SettingsView: View {
 
                     // About
                     settingsSection(title: "About", icon: "info.circle") {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Star Video Downloader")
                                 .fontWeight(.medium)
-                            Text("Download videos from YouTube, Vimeo, Twitter/X, TikTok, and 1800+ sites in up to 4K/8K quality.")
+                            Text("Download videos from YouTube, Vimeo, Twitter/X, TikTok, and 1000+ sites in up to 4K/8K quality.")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                             Text("Powered by yt-dlp")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+
+                            HStack(spacing: 12) {
+                                Button("Export Support Bundle") {
+                                    exportSupportBundle()
+                                }
+                                .buttonStyle(SecondaryButtonStyle())
+                                .controlSize(.small)
+
+                                Button("Open Help") {
+                                    NSWorkspace.shared.open(URL(string: "https://starvideoapp.com/help")!)
+                                }
+                                .buttonStyle(.plain)
+                                .font(.caption)
+                                .foregroundStyle(Color.accentColor)
+
+                                Button("Release Notes") {
+                                    NSWorkspace.shared.open(URL(string: "https://starvideoapp.com/release-notes")!)
+                                }
+                                .buttonStyle(.plain)
+                                .font(.caption)
+                                .foregroundStyle(Color.accentColor)
+                            }
                         }
                     }
                 }
@@ -1006,6 +1050,16 @@ struct SettingsView: View {
         let prefix = key.prefix(8)
         let suffix = String(repeating: "*", count: max(0, key.count - 8))
         return prefix + suffix
+    }
+
+    private func exportSupportBundle() {
+        guard let data = manager.exportSupportBundle() else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "star-video-downloader-support.json"
+        if panel.runModal() == .OK, let url = panel.url {
+            try? data.write(to: url, options: .atomic)
+        }
     }
 
     private var isPlaylistItemsFilterValid: Bool {

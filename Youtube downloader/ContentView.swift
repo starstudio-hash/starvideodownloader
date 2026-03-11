@@ -72,10 +72,16 @@ struct ContentView: View {
     @State private var pendingPlaylistURL: String? = nil
     @State private var pendingPlaylistItemCount: Int = 0
     @State private var pendingPlaylistTitle: String? = nil
+    @State private var pendingPlaylistEntries: [PlaylistEntryPreview] = []
+    @State private var selectedPlaylistEntryIDs: Set<String> = []
     @State private var showPlaylistConfirm: Bool = false
     @State private var isInspectingPlaylist: Bool = false
     @State private var showPlaylistInspectError: Bool = false
     @State private var playlistInspectErrorMessage: String = ""
+    @State private var urlInspection: URLInspectionResult? = nil
+    @State private var isInspectingURL: Bool = false
+    @State private var urlInspectionErrorMessage: String = ""
+    @State private var previewWorkItem: DispatchWorkItem?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -123,13 +129,28 @@ struct ContentView: View {
         .sheet(isPresented: $showBatchInput) {
             BatchURLInputView(manager: manager)
         }
+        .sheet(isPresented: $showPlaylistConfirm, onDismiss: { clearPendingPlaylistSelection() }) {
+            PlaylistSelectionView(
+                playlistTitle: pendingPlaylistTitle ?? "Playlist",
+                entries: pendingPlaylistEntries,
+                selectedIDs: $selectedPlaylistEntryIDs,
+                onCancel: { clearPendingPlaylistSelection() },
+                onConfirm: {
+                    if let url = pendingPlaylistURL {
+                        let selectedEntries = pendingPlaylistEntries.filter { selectedPlaylistEntryIDs.contains($0.id) }
+                        startPlaylistDownload(url: url, selectedEntries: selectedEntries)
+                    }
+                    clearPendingPlaylistSelection()
+                }
+            )
+        }
         .sheet(isPresented: $showUpgradePrompt) {
             UpgradePromptView(reason: upgradeReason)
         }
         .alert("Invalid URL", isPresented: $showInvalidURLAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Please enter a valid video URL.\n\nSupported: YouTube, Vimeo, Twitter/X, TikTok, Instagram, Reddit, Dailymotion, and 1800+ other sites.")
+            Text("Please enter a valid video URL.\n\nSupported: YouTube, Vimeo, Twitter/X, TikTok, Instagram, Reddit, Dailymotion, and 1000+ other sites.")
         }
         .alert("yt-dlp Not Installed", isPresented: $showInstallAlert) {
             Button("Install Now") {
@@ -176,31 +197,13 @@ struct ContentView: View {
         } message: {
             Text(duplicateAlertMessage)
         }
-        .alert("Download Entire Playlist?", isPresented: $showPlaylistConfirm) {
-            Button("Download All \(pendingPlaylistItemCount > 0 ? "(\(pendingPlaylistItemCount) videos)" : "")") {
-                if let url = pendingPlaylistURL {
-                    startPlaylistDownload(url: url)
-                }
-                pendingPlaylistURL = nil
-                pendingPlaylistTitle = nil
-                pendingPlaylistItemCount = 0
-            }
-            Button("Cancel", role: .cancel) {
-                pendingPlaylistURL = nil
-                pendingPlaylistTitle = nil
-                pendingPlaylistItemCount = 0
-            }
-        } message: {
-            if pendingPlaylistItemCount > 0 {
-                Text("\(pendingPlaylistTitle ?? "This playlist") has \(pendingPlaylistItemCount) videos. Each video will be added to the queue and downloaded sequentially (up to \(manager.settings.maxConcurrentDownloads) at a time).")
-            } else {
-                Text("This will download all videos in the playlist. Each video will be added to the queue and downloaded sequentially (up to \(manager.settings.maxConcurrentDownloads) at a time).")
-            }
-        }
         .alert("Playlist Inspection Failed", isPresented: $showPlaylistInspectError) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(playlistInspectErrorMessage)
+        }
+        .onChange(of: urlInput) {
+            scheduleURLInspection()
         }
     }
 
@@ -232,6 +235,10 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // URL input area
             urlInputArea
+
+            if shouldShowURLInspectionCard {
+                urlInspectionCard
+            }
 
             // Setup banner when yt-dlp is not installed
             if !manager.isYtdlpInstalled {
@@ -335,7 +342,7 @@ struct ContentView: View {
                             .background(detectedSiteColor.opacity(0.12))
                             .clipShape(RoundedRectangle(cornerRadius: 3))
                     }
-                    TextField("Paste video URL (YouTube, Vimeo, Twitter, 1800+ sites)…", text: $urlInput)
+                    TextField("Paste video URL (YouTube, Vimeo, Twitter, 1000+ sites)…", text: $urlInput)
                         .textFieldStyle(.plain)
                         .font(.system(size: 13))
                         .onSubmit { submitDownload() }
@@ -516,6 +523,91 @@ struct ContentView: View {
         .background(Color(NSColor.controlBackgroundColor))
     }
 
+    private var shouldShowURLInspectionCard: Bool {
+        let trimmed = urlInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        return manager.isYtdlpInstalled && !trimmed.isEmpty && (isInspectingURL || urlInspection != nil || !urlInspectionErrorMessage.isEmpty)
+    }
+
+    private var urlInspectionCard: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(alignment: .top, spacing: 12) {
+                Group {
+                    if let thumbnailURL = urlInspection?.thumbnailURL {
+                        AsyncImage(url: thumbnailURL) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.secondary.opacity(0.12))
+                                .overlay { ProgressView().controlSize(.small) }
+                        }
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.secondary.opacity(0.12))
+                            .overlay {
+                                Image(systemName: urlInspection?.isPlaylist == true ? "list.bullet.rectangle" : detectedSiteIcon)
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(.secondary)
+                            }
+                    }
+                }
+                .frame(width: 72, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if isInspectingURL {
+                        HStack(spacing: 8) {
+                            ProgressView().controlSize(.small)
+                            Text("Inspecting URL…")
+                                .font(.callout.weight(.medium))
+                        }
+                        Text("Fetching title, channel, duration, and playlist details before you add it.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if let inspection = urlInspection {
+                        Text(inspection.playlistTitle ?? inspection.title ?? "Detected media")
+                            .font(.callout.weight(.medium))
+                            .lineLimit(2)
+
+                        HStack(spacing: 10) {
+                            if let channel = inspection.channel, !channel.isEmpty {
+                                Label(channel, systemImage: "person.circle")
+                            }
+                            if let durationText = inspection.durationText, !durationText.isEmpty {
+                                Label(durationText, systemImage: "clock")
+                            }
+                            if inspection.isLiveStream {
+                                Label("Live", systemImage: "dot.radiowaves.left.and.right")
+                                    .foregroundStyle(.red)
+                            }
+                            if inspection.isPlaylist {
+                                Label("\(inspection.playlistCount) videos", systemImage: "list.bullet")
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                        if inspection.isPlaylist, !inspection.playlistEntries.isEmpty {
+                            Text(inspection.playlistEntries.prefix(3).map { "\($0.index). \($0.title)" }.joined(separator: "  •  "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    } else if !urlInspectionErrorMessage.isEmpty {
+                        Text(urlInspectionErrorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color(NSColor.controlBackgroundColor))
+        }
+    }
+
     // MARK: - Empty State
 
     private var emptyState: some View {
@@ -530,7 +622,7 @@ struct ContentView: View {
                 .fontWeight(.medium)
                 .foregroundStyle(.secondary)
 
-            Text("Paste a video URL above and click Download.\nSupports YouTube, Vimeo, Twitter/X, TikTok, Instagram, and 1800+ other sites.")
+            Text("Paste a video URL above and click Download.\nSupports YouTube, Vimeo, Twitter/X, TikTok, Instagram, and 1000+ other sites.")
                 .font(.callout)
                 .foregroundStyle(Color.secondary.opacity(0.7))
                 .multilineTextAlignment(.center)
@@ -863,12 +955,13 @@ struct ContentView: View {
         }
     }
 
-    private func startPlaylistDownload(url: String) {
+    private func startPlaylistDownload(url: String, selectedEntries: [PlaylistEntryPreview]) {
         manager.addPlaylistDownload(
             url: url,
             quality: selectedQuality,
             format: selectedFormat,
-            subtitles: downloadSubtitles
+            subtitles: downloadSubtitles,
+            selectedEntries: selectedEntries
         )
         urlInput = ""
     }
@@ -884,12 +977,22 @@ struct ContentView: View {
             case .success(let inspection):
                 pendingPlaylistItemCount = inspection.playlistCount
                 pendingPlaylistTitle = inspection.playlistTitle ?? inspection.title
+                pendingPlaylistEntries = inspection.playlistEntries.sorted { $0.index < $1.index }
+                selectedPlaylistEntryIDs = Set(inspection.playlistEntries.map(\.id))
                 showPlaylistConfirm = true
             case .failure(let error):
                 playlistInspectErrorMessage = error.errorDescription ?? "Could not inspect that playlist."
                 showPlaylistInspectError = true
             }
         }
+    }
+
+    private func clearPendingPlaylistSelection() {
+        pendingPlaylistURL = nil
+        pendingPlaylistTitle = nil
+        pendingPlaylistItemCount = 0
+        pendingPlaylistEntries = []
+        selectedPlaylistEntryIDs = []
     }
 
     private func handleDuplicateIfNeeded(url: String, isPlaylist: Bool) -> Bool {
@@ -929,6 +1032,38 @@ struct ContentView: View {
             )
             urlInput = ""
         }
+    }
+
+    private func scheduleURLInspection() {
+        previewWorkItem?.cancel()
+        let trimmed = urlInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, isValidDownloadURL(trimmed), manager.isYtdlpInstalled else {
+            isInspectingURL = false
+            urlInspection = nil
+            urlInspectionErrorMessage = ""
+            return
+        }
+
+        isInspectingURL = true
+        urlInspectionErrorMessage = ""
+
+        let requestedURL = trimmed
+        let work = DispatchWorkItem {
+            manager.inspectURL(url: requestedURL) { result in
+                guard requestedURL == urlInput.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                isInspectingURL = false
+                switch result {
+                case .success(let inspection):
+                    urlInspection = inspection
+                    urlInspectionErrorMessage = ""
+                case .failure(let error):
+                    urlInspection = nil
+                    urlInspectionErrorMessage = error.errorDescription ?? "Could not inspect that URL."
+                }
+            }
+        }
+        previewWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
 
     private func clearPendingDuplicate() {
@@ -1165,6 +1300,113 @@ struct TabBarView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(Color(NSColor.controlBackgroundColor))
+    }
+}
+
+struct PlaylistSelectionView: View {
+    let playlistTitle: String
+    let entries: [PlaylistEntryPreview]
+    @Binding var selectedIDs: Set<String>
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(playlistTitle)
+                        .font(.title3.weight(.semibold))
+                    Text("Choose which videos to add to your queue.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    selectedIDs = Set(entries.map(\.id))
+                } label: {
+                    Text("Select All")
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    selectedIDs.removeAll()
+                } label: {
+                    Text("Clear")
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(16)
+
+            Divider()
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(entries) { entry in
+                        Button {
+                            if selectedIDs.contains(entry.id) {
+                                selectedIDs.remove(entry.id)
+                            } else {
+                                selectedIDs.insert(entry.id)
+                            }
+                        } label: {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: selectedIDs.contains(entry.id) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(selectedIDs.contains(entry.id) ? Color.accentColor : .secondary)
+                                    .font(.system(size: 16))
+                                    .padding(.top, 2)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("\(entry.index). \(entry.title)")
+                                        .font(.callout)
+                                        .foregroundStyle(.primary)
+                                        .multilineTextAlignment(.leading)
+
+                                    HStack(spacing: 8) {
+                                        if let channel = entry.channel, !channel.isEmpty {
+                                            Label(channel, systemImage: "person.circle")
+                                        }
+                                        if let durationText = entry.durationText, !durationText.isEmpty {
+                                            Label(durationText, systemImage: "clock")
+                                        }
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider()
+                            .padding(.leading, 16)
+                    }
+                }
+            }
+
+            HStack {
+                Button("Cancel") {
+                    onCancel()
+                    dismiss()
+                }
+                .buttonStyle(SecondaryButtonStyle())
+
+                Spacer()
+
+                Button("Add \(selectedIDs.count) to Queue") {
+                    onConfirm()
+                    dismiss()
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(selectedIDs.isEmpty)
+            }
+            .padding(16)
+        }
+        .frame(width: 620, height: 520)
     }
 }
 

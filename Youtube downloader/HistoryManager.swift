@@ -8,6 +8,7 @@ import Foundation
 struct HistoryEntry: Codable, Identifiable {
     var id: UUID = UUID()
     var url: String
+    var duplicateKey: String?
     var title: String
     var channelName: String
     var date: Date
@@ -66,6 +67,7 @@ class HistoryManager {
 
         let entry = HistoryEntry(
             url: item.url,
+            duplicateKey: item.sourcePlaylistURL.map { "\($0)#\(item.playlistIndex ?? 0)" },
             title: item.title,
             channelName: item.channelName,
             date: Date(),

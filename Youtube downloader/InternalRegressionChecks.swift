@@ -16,6 +16,7 @@ enum InternalRegressionChecks {
             playlistDownload: false,
             playlistTitle: "Sample Playlist",
             playlistIndex: 4,
+            sourcePlaylistURL: "https://example.com/playlist?list=abc",
             scheduledStartDate: Date(timeIntervalSince1970: 12345)
         )
         original.title = "Sample Title"
@@ -33,6 +34,7 @@ enum InternalRegressionChecks {
         assert(restored.format == original.format, "Queue persistence should preserve format.")
         assert(restored.playlistTitle == original.playlistTitle, "Queue persistence should preserve playlist title.")
         assert(restored.playlistIndex == original.playlistIndex, "Queue persistence should preserve playlist index.")
+        assert(restored.sourcePlaylistURL == original.sourcePlaylistURL, "Queue persistence should preserve playlist source URL.")
         assert(restored.scheduledStartDate == original.scheduledStartDate, "Queue persistence should preserve scheduled dates.")
         assert(restored.isLiveStream == original.isLiveStream, "Queue persistence should preserve live metadata.")
 

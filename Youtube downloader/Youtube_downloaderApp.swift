@@ -40,6 +40,11 @@ struct Youtube_downloaderApp: App {
                         requestNotificationPermission()
                     }
                     manager.performStartupChecks()
+                    if !licenseManager.licenseKey.isEmpty {
+                        Task {
+                            _ = await licenseManager.validateLicense()
+                        }
+                    }
                     // Start clipboard monitoring if enabled
                     if settings.clipboardMonitoring {
                         manager.startClipboardMonitoring()

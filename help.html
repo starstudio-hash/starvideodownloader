@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>Star Video Downloader Help — Install, Activation, and Mac Troubleshooting</title>
+    <meta name="description" content="Get help installing Star Video Downloader on Mac, activating Pro, fixing Gatekeeper warnings, and exporting a support bundle for troubleshooting.">
+    <link rel="canonical" href="https://starvideoapp.com/help">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://starvideoapp.com/help">
+    <meta property="og:title" content="Star Video Downloader Help">
+    <meta property="og:description" content="Install, activation, damaged-app troubleshooting, and support steps for Star Video Downloader on Mac.">
+    <meta property="og:image" content="https://starvideoapp.com/screenshot.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Star Video Downloader Help">
+    <meta name="twitter:description" content="Install, activation, damaged-app troubleshooting, and support steps for Star Video Downloader on Mac.">
+    <meta name="twitter:image" content="https://starvideoapp.com/screenshot.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page-hero { background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%); color: white; padding: 80px 0 56px; text-align: center; }
+        .page-hero h1 { font-size: clamp(30px, 4vw, 48px); margin: 0 0 14px; line-height: 1.1; }
+        .page-hero p { max-width: 760px; margin: 0 auto; opacity: 0.86; font-size: 18px; line-height: 1.7; }
+        .page-section { padding: 72px 0; }
+        .page-section:nth-child(even) { background: var(--gray-50); }
+        .prose { max-width: 920px; margin: 0 auto; }
+        .prose h2 { font-size: 30px; margin-bottom: 14px; }
+        .prose h3 { font-size: 20px; margin: 28px 0 10px; }
+        .prose p, .prose li { font-size: 16px; line-height: 1.8; color: var(--gray-600); }
+        .prose ul, .prose ol { padding-left: 20px; }
+        .callout { background: white; border: 1px solid var(--gray-200); border-radius: 18px; padding: 24px; box-shadow: 0 10px 36px rgba(15, 23, 42, 0.06); margin-top: 24px; }
+        .breadcrumb { padding: 16px 0; font-size: 14px; color: var(--gray-500); }
+        .breadcrumb a { color: var(--blue-600); text-decoration: none; }
+        code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <img src="icon.png" alt="Star Video Downloader logo" class="logo-icon" width="32" height="32">
+                <span>Star Video Downloader</span>
+            </a>
+            <div class="nav-links">
+                <a href="/guides">Guides</a>
+                <a href="/comparisons">Comparisons</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/about">About</a>
+                <a href="https://github.com/starstudio-hash/starvideodownloader/releases/latest/download/Star.Video.Downloader.zip" class="btn btn-primary btn-sm">Download Free</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="page-hero">
+        <div class="container">
+            <h1>Star Video Downloader Help</h1>
+            <p>Everything most users need after downloading the app: install steps, Pro activation help, Gatekeeper troubleshooting, and what to send if support needs more detail.</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">Home</a> &rsaquo; Help
+        </nav>
+    </div>
+
+    <section class="page-section">
+        <div class="container prose">
+            <h2>Install on Mac</h2>
+            <ol>
+                <li>Download the latest ZIP from the website or GitHub release.</li>
+                <li>Open the ZIP and drag <strong>Star Video Downloader</strong> into Applications.</li>
+                <li>Open the app and let it install <code>yt-dlp</code> and <code>ffmpeg</code> if prompted.</li>
+            </ol>
+
+            <div class="callout">
+                <h3>If macOS says the app is damaged or cannot be opened</h3>
+                <p>Delete the old downloaded ZIP and app first, then download the latest release again. If Gatekeeper still blocks it, move the app to Applications and use <strong>Open Anyway</strong> in System Settings &gt; Privacy &amp; Security.</p>
+                <p>If you are comfortable with Terminal and trust this app, this also removes the quarantine flag:</p>
+                <p><code>xattr -dr com.apple.quarantine "/Applications/Youtube downloader.app"</code></p>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section">
+        <div class="container prose">
+            <h2>Activate Pro</h2>
+            <ol>
+                <li>Buy Pro through Gumroad.</li>
+                <li>Copy the license key from the email receipt.</li>
+                <li>Open the app, go to Settings, paste the key, and click <strong>Activate</strong>.</li>
+            </ol>
+            <p>The Settings screen now shows your Free or Pro status, the last validation result, and a manual <strong>Validate License Now</strong> action. If you are moving to another Mac, use <strong>Remove from This Mac</strong> on the old install first so your local activation is cleared there.</p>
+        </div>
+    </section>
+
+    <section class="page-section">
+        <div class="container prose">
+            <h2>Send Better Support Details</h2>
+            <p>If a download, activation, conversion, or repair job fails, open Settings and choose <strong>Export Support Bundle</strong>. That file includes backend health checks, queue state, license status, and recent failures without including your full license key.</p>
+            <p>Email the exported JSON to <a href="mailto:support@starvideoapp.com">support@starvideoapp.com</a> with the URL or file you were working with and a short note about what happened.</p>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <img src="icon.png" alt="Star Video Downloader" class="footer-icon" loading="lazy" width="24" height="24">
+                <span>Star Video Downloader</span>
+            </div>
+            <div class="footer-right">
+                <a href="/">Home</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/release-notes">Release Notes</a>
+                <a href="/safety">Safety</a>
+                <a href="/privacy">Privacy</a>
+                <a href="mailto:support@starvideoapp.com">Contact</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

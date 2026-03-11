@@ -5,6 +5,94 @@
 
 import Foundation
 
+private enum PersistedRepairStatusKind: String, Codable {
+    case waiting
+    case scanning
+    case scanned
+    case repairing
+    case completed
+    case failed
+    case cancelled
+}
+
+private struct PersistedRepairItem: Codable {
+    var inputPath: String
+    var outputPath: String?
+    var fileName: String
+    var fileSize: Int64
+    var statusKind: PersistedRepairStatusKind
+    var severity: String?
+    var message: String?
+    var detectedIssues: [String]
+    var issueCount: Int
+    var repairStage: Int
+    var duration: Double
+    var resolution: String
+    var codec: String
+    var addedDate: Date
+
+    init(item: RepairItem) {
+        inputPath = item.inputPath.path
+        outputPath = item.outputPath?.path
+        fileName = item.fileName
+        fileSize = item.fileSize
+        detectedIssues = item.detectedIssues
+        issueCount = item.issueCount
+        repairStage = item.repairStage
+        duration = item.duration
+        resolution = item.resolution
+        codec = item.codec
+        addedDate = item.addedDate
+        switch item.status {
+        case .waiting:
+            statusKind = .waiting
+        case .scanning:
+            statusKind = .scanning
+        case .scanned(let severity):
+            statusKind = .scanned
+            self.severity = severity
+        case .repairing:
+            statusKind = .repairing
+        case .completed:
+            statusKind = .completed
+        case .failed(let message):
+            statusKind = .failed
+            self.message = message
+        case .cancelled:
+            statusKind = .cancelled
+        }
+    }
+
+    func makeItem() -> RepairItem {
+        let item = RepairItem(inputPath: URL(fileURLWithPath: inputPath))
+        item.outputPath = outputPath.map { URL(fileURLWithPath: $0) }
+        item.fileName = fileName
+        item.fileSize = fileSize
+        item.detectedIssues = detectedIssues
+        item.issueCount = issueCount
+        item.repairStage = repairStage
+        item.duration = duration
+        item.resolution = resolution
+        item.codec = codec
+        item.addedDate = addedDate
+        switch statusKind {
+        case .waiting:
+            item.status = .waiting
+        case .scanning, .repairing:
+            item.status = .failed("Interrupted by a previous app session. Retry to continue.")
+        case .scanned:
+            item.status = .scanned(severity: severity ?? "Moderate")
+        case .completed:
+            item.status = .completed
+        case .failed:
+            item.status = .failed(message ?? "Repair failed.")
+        case .cancelled:
+            item.status = .cancelled
+        }
+        return item
+    }
+}
+
 @Observable
 class RepairManager {
     var items: [RepairItem] = []
@@ -13,6 +101,10 @@ class RepairManager {
     private var waitingItems: [RepairItem] = []
     var maxConcurrent: Int = 2
     var repairMode: RepairMode = .auto
+    private var saveWork: DispatchWorkItem?
+
+    private static let queueStateURL = DownloadManager.appSupportDirectory().appendingPathComponent("repair-queue.json")
+    private static let saveQueue = DispatchQueue(label: "com.starvideodownloader.repair-save", qos: .utility)
 
     // MARK: - ffmpeg / ffprobe paths
 
@@ -56,6 +148,10 @@ class RepairManager {
         _cachedFfprobePath = nil
     }
 
+    init() {
+        restorePersistedQueue()
+    }
+
     // MARK: - Public API
 
     func addFiles(_ urls: [URL]) {
@@ -66,6 +162,7 @@ class RepairManager {
             items.append(item)
             scanFile(item)
         }
+        schedulePersistence()
     }
 
     func scanAllItems() {
@@ -100,11 +197,13 @@ class RepairManager {
         if wasActive && activeCount > 0 { activeCount -= 1 }
         waitingItems.removeAll { $0.id == item.id }
         startNextWaiting()
+        schedulePersistence()
     }
 
     func removeItem(_ item: RepairItem) {
         cancelRepair(item)
         items.removeAll { $0.id == item.id }
+        schedulePersistence()
     }
 
     func clearCompleted() {
@@ -114,6 +213,7 @@ class RepairManager {
             if case .failed = $0.status { return true }
             return false
         }
+        schedulePersistence()
     }
 
     func retryRepair(_ item: RepairItem) {
@@ -121,6 +221,7 @@ class RepairManager {
         item.outputPath = nil
         item.repairStage = 0
         scanFile(item)
+        schedulePersistence()
     }
 
     func startRepair(_ item: RepairItem) {
@@ -137,6 +238,7 @@ class RepairManager {
             item.status = .waiting
             waitingItems.append(item)
         }
+        schedulePersistence()
     }
 
     private func startNextWaiting() {
@@ -153,10 +255,12 @@ class RepairManager {
     private func scanFile(_ item: RepairItem) {
         guard isFfmpegInstalled else {
             item.status = .failed("ffmpeg not found. Install it from the Convert tab.")
+            schedulePersistence()
             return
         }
 
         item.status = .scanning
+        schedulePersistence()
         let inputPath = item.inputPath.path
         let probePath = ffprobePath
         let ffmpeg = ffmpegPath
@@ -275,6 +379,7 @@ class RepairManager {
                 item.resolution = resolution
                 item.codec = codec
                 item.status = .scanned(severity: severity)
+                self.schedulePersistence()
             }
         }
     }
@@ -286,6 +391,7 @@ class RepairManager {
             item.status = .failed("ffmpeg not found.")
             if activeCount > 0 { activeCount -= 1 }
             startNextWaiting()
+            schedulePersistence()
             return
         }
 
@@ -298,6 +404,7 @@ class RepairManager {
 
         DispatchQueue.main.async {
             item.status = .repairing(progress: 0, stage: 1, totalStages: maxStage)
+            self.schedulePersistence()
         }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -317,6 +424,7 @@ class RepairManager {
                 DispatchQueue.main.async {
                     item.repairStage = stage
                     item.status = .repairing(progress: 0, stage: stage, totalStages: maxStage)
+                    self.schedulePersistence()
                 }
 
                 let outputPath = outputDir.appendingPathComponent("\(baseName)_repaired.\(ext)").path
@@ -387,6 +495,7 @@ class RepairManager {
                         DispatchQueue.main.async {
                             item.outputPath = URL(fileURLWithPath: outputPath)
                             item.status = .completed
+                            self.schedulePersistence()
                         }
                         success = true
                         break
@@ -407,6 +516,7 @@ class RepairManager {
                     }
                 }
                 self.processes.removeValue(forKey: item.id)
+                self.schedulePersistence()
                 self.startNextWaiting()
             }
         }
@@ -459,6 +569,7 @@ class RepairManager {
                         lastProgressUpdate = now
                         DispatchQueue.main.async {
                             item.status = .repairing(progress: pct, stage: stage, totalStages: totalStages)
+                            self.schedulePersistence()
                         }
                     }
                 }
@@ -466,12 +577,16 @@ class RepairManager {
         }
 
         guard (try? process.run()) != nil else {
-            DispatchQueue.main.async { self.processes.removeValue(forKey: item.id) }
+            DispatchQueue.main.async {
+                self.processes.removeValue(forKey: item.id)
+                self.schedulePersistence()
+            }
             return false
         }
         process.waitUntilExit()
 
         outPipe.fileHandleForReading.readabilityHandler = nil
+        DispatchQueue.main.async { self.schedulePersistence() }
         return process.terminationStatus == 0
     }
 
@@ -520,6 +635,39 @@ class RepairManager {
 
         // Accept if few or no errors
         return errorCount <= 3
+    }
+
+    private func schedulePersistence() {
+        saveWork?.cancel()
+        let snapshot = items.map(PersistedRepairItem.init(item:))
+        let work = DispatchWorkItem {
+            Self.saveQueue.async {
+                if snapshot.isEmpty {
+                    try? FileManager.default.removeItem(at: Self.queueStateURL)
+                    return
+                }
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                if let data = try? encoder.encode(snapshot) {
+                    try? data.write(to: Self.queueStateURL, options: .atomic)
+                }
+            }
+        }
+        saveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+
+    private func restorePersistedQueue() {
+        guard let data = try? Data(contentsOf: Self.queueStateURL) else { return }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let snapshot = try? decoder.decode([PersistedRepairItem].self, from: data) else { return }
+        items = snapshot.map { $0.makeItem() }
+        waitingItems = items.filter {
+            if case .waiting = $0.status { return true }
+            return false
+        }
     }
 
     // MARK: - Helpers

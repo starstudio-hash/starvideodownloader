@@ -368,17 +368,27 @@ struct RepairRowView: View {
                     .font(.caption)
                     .foregroundStyle(.green)
             } else if !item.detectedIssues.isEmpty {
-                Text(item.detectedIssues.joined(separator: " · "))
+                Text(item.diagnosticSummary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                Text(item.recommendedNextStep)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2)
             }
         }
         if case .failed(let msg) = item.status {
-            Text(msg)
-                .font(.caption2)
-                .foregroundStyle(Color.red)
-                .lineLimit(2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(msg)
+                    .font(.caption2)
+                    .foregroundStyle(Color.red)
+                    .lineLimit(2)
+                Text(item.recommendedNextStep)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2)
+            }
         }
         if case .completed = item.status {
             HStack(spacing: 4) {

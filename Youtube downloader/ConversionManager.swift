@@ -5,6 +5,85 @@
 
 import Foundation
 
+private enum PersistedConversionStatusKind: String, Codable {
+    case waiting
+    case converting
+    case completed
+    case failed
+    case cancelled
+}
+
+private struct PersistedConversionItem: Codable {
+    var inputPath: String
+    var outputPath: String?
+    var fileName: String
+    var fileSize: String
+    var statusKind: PersistedConversionStatusKind
+    var statusMessage: String?
+    var progress: Double?
+    var videoCodec: String
+    var audioCodec: String
+    var encodingQuality: String
+    var outputFormat: String
+    var audioOnly: Bool
+    var addedDate: Date
+
+    init(item: ConversionItem) {
+        inputPath = item.inputPath.path
+        outputPath = item.outputPath?.path
+        fileName = item.fileName
+        fileSize = item.fileSize
+        videoCodec = item.videoCodec.rawValue
+        audioCodec = item.audioCodec.rawValue
+        encodingQuality = item.encodingQuality.rawValue
+        outputFormat = item.outputFormat
+        audioOnly = item.audioOnly
+        addedDate = item.addedDate
+        switch item.status {
+        case .waiting:
+            statusKind = .waiting
+        case .converting(let progress):
+            statusKind = .converting
+            self.progress = progress
+        case .completed:
+            statusKind = .completed
+        case .failed(let message):
+            statusKind = .failed
+            statusMessage = message
+        case .cancelled:
+            statusKind = .cancelled
+        }
+    }
+
+    func makeItem() -> ConversionItem {
+        let item = ConversionItem(
+            inputPath: URL(fileURLWithPath: inputPath),
+            videoCodec: VideoCodec(rawValue: videoCodec) ?? .h264,
+            audioCodec: AudioCodec(rawValue: audioCodec) ?? .aac,
+            encodingQuality: EncodingQuality(rawValue: encodingQuality) ?? .medium,
+            outputFormat: outputFormat,
+            audioOnly: audioOnly
+        )
+        item.fileName = fileName
+        item.fileSize = fileSize
+        item.addedDate = addedDate
+        item.outputPath = outputPath.map { URL(fileURLWithPath: $0) }
+        switch statusKind {
+        case .waiting:
+            item.status = .waiting
+        case .converting:
+            item.status = .failed("Interrupted by a previous app session. Retry to continue.")
+        case .completed:
+            item.status = .completed
+        case .failed:
+            item.status = .failed(statusMessage ?? "Conversion failed.")
+        case .cancelled:
+            item.status = .cancelled
+        }
+        return item
+    }
+}
+
 @Observable
 class ConversionManager {
     var items: [ConversionItem] = []
@@ -12,6 +91,10 @@ class ConversionManager {
     private var activeCount = 0
     private var waitingItems: [ConversionItem] = []
     var maxConcurrent: Int = 2
+    private var saveWork: DispatchWorkItem?
+
+    private static let queueStateURL = DownloadManager.appSupportDirectory().appendingPathComponent("conversion-queue.json")
+    private static let saveQueue = DispatchQueue(label: "com.starvideodownloader.conversion-save", qos: .utility)
 
     // MARK: - ffmpeg path
 
@@ -39,6 +122,10 @@ class ConversionManager {
         _cachedFfmpegPath = nil
     }
 
+    init() {
+        restorePersistedQueue()
+    }
+
     // MARK: - Public API
 
     func addFiles(_ urls: [URL], videoCodec: VideoCodec, audioCodec: AudioCodec, quality: EncodingQuality, outputFormat: String, processingOptions: VideoProcessingOptions = VideoProcessingOptions(), audioOnly: Bool = false) {
@@ -55,6 +142,7 @@ class ConversionManager {
             items.append(item)
             enqueueOrStart(item)
         }
+        schedulePersistence()
     }
 
     func cancelConversion(_ item: ConversionItem) {
@@ -72,17 +160,20 @@ class ConversionManager {
         if wasActive && activeCount > 0 { activeCount -= 1 }
         waitingItems.removeAll { $0.id == item.id }
         startNextWaiting()
+        schedulePersistence()
     }
 
     func removeItem(_ item: ConversionItem) {
         cancelConversion(item)
         items.removeAll { $0.id == item.id }
+        schedulePersistence()
     }
 
     func retryConversion(_ item: ConversionItem) {
         item.status = .waiting
         item.outputPath = nil
         enqueueOrStart(item)
+        schedulePersistence()
     }
 
     // MARK: - Queue
@@ -95,6 +186,7 @@ class ConversionManager {
             item.status = .waiting
             waitingItems.append(item)
         }
+        schedulePersistence()
     }
 
     private func startNextWaiting() {
@@ -113,10 +205,12 @@ class ConversionManager {
             item.status = .failed("ffmpeg not found. Install it from the Convert tab.")
             if activeCount > 0 { activeCount -= 1 }
             startNextWaiting()
+            schedulePersistence()
             return
         }
 
         item.status = .converting(progress: 0)
+        schedulePersistence()
 
         let input = item.inputPath.path
         let vidCodec = item.videoCodec
@@ -196,6 +290,7 @@ class ConversionManager {
                 } else {
                     item.status = .failed("Conversion failed. Check that the input file is a valid media file.")
                 }
+                self.schedulePersistence()
                 self.startNextWaiting()
             }
         }
@@ -258,18 +353,27 @@ class ConversionManager {
                 let now = DispatchTime.now()
                 if now > lastProgressUpdate + .milliseconds(100) {
                     lastProgressUpdate = now
-                    DispatchQueue.main.async { item.status = .converting(progress: pct) }
+                    DispatchQueue.main.async {
+                        item.status = .converting(progress: pct)
+                        self?.schedulePersistence()
+                    }
                 }
             }
         }
 
         guard (try? process.run()) != nil else {
-            DispatchQueue.main.async { self.processes.removeValue(forKey: item.id) }
+            DispatchQueue.main.async {
+                self.processes.removeValue(forKey: item.id)
+                self.schedulePersistence()
+            }
             return false
         }
         process.waitUntilExit()
         outPipe.fileHandleForReading.readabilityHandler = nil
-        DispatchQueue.main.async { self.processes.removeValue(forKey: item.id) }
+        DispatchQueue.main.async {
+            self.processes.removeValue(forKey: item.id)
+            self.schedulePersistence()
+        }
         return process.terminationStatus == 0
     }
 
@@ -289,6 +393,7 @@ class ConversionManager {
         item.title = "Concatenated (\(urls.count) files)"
         items.append(item)
         item.status = .converting(progress: 0)
+        schedulePersistence()
 
         let ffmpeg = ffmpegPath
         let allPaths = urls
@@ -324,6 +429,7 @@ class ConversionManager {
                 DispatchQueue.main.async {
                     self.processes.removeValue(forKey: item.id)
                     item.status = .failed("Failed to start concatenation")
+                    self.schedulePersistence()
                 }
                 return
             }
@@ -338,7 +444,41 @@ class ConversionManager {
                 } else {
                     item.status = .failed("Concatenation failed. Ensure all files have matching codecs and container formats.")
                 }
+                self.schedulePersistence()
             }
+        }
+    }
+
+    private func schedulePersistence() {
+        saveWork?.cancel()
+        let snapshot = items.map(PersistedConversionItem.init(item:))
+        let work = DispatchWorkItem {
+            Self.saveQueue.async {
+                if snapshot.isEmpty {
+                    try? FileManager.default.removeItem(at: Self.queueStateURL)
+                    return
+                }
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                if let data = try? encoder.encode(snapshot) {
+                    try? data.write(to: Self.queueStateURL, options: .atomic)
+                }
+            }
+        }
+        saveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+
+    private func restorePersistedQueue() {
+        guard let data = try? Data(contentsOf: Self.queueStateURL) else { return }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let snapshot = try? decoder.decode([PersistedConversionItem].self, from: data) else { return }
+        items = snapshot.map { $0.makeItem() }
+        waitingItems = items.filter {
+            if case .waiting = $0.status { return true }
+            return false
         }
     }
 

@@ -132,6 +132,7 @@ enum OutputFormat: String, CaseIterable, Identifiable {
 class DownloadItem: Identifiable {
     let id = UUID()
     var url: String
+    var sourcePlaylistURL: String?
     var title: String
     var thumbnail: URL?
     var channelName: String
@@ -165,9 +166,11 @@ class DownloadItem: Identifiable {
         playlistDownload: Bool = false,
         playlistTitle: String? = nil,
         playlistIndex: Int? = nil,
+        sourcePlaylistURL: String? = nil,
         scheduledStartDate: Date? = nil
     ) {
         self.url = url
+        self.sourcePlaylistURL = sourcePlaylistURL
         self.title = url
         self.channelName = ""
         self.duration = ""

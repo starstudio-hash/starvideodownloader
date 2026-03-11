@@ -39,6 +39,8 @@ class LicenseManager {
     var activationDate: Date? = nil
     var dailyDownloadCount: Int = 0
     var lastDownloadDate: Date? = nil
+    var lastValidationDate: Date? = nil
+    var lastValidationMessage: String? = nil
 
     /// True while an activation/validation request is in progress
     var isActivating: Bool = false
@@ -112,6 +114,8 @@ class LicenseManager {
         static let activationDate = "license_activationDate"
         static let dailyDownloadCount = "license_dailyDownloadCount"
         static let lastDownloadDate = "license_lastDownloadDate"
+        static let lastValidationDate = "license_lastValidationDate"
+        static let lastValidationMessage = "license_lastValidationMessage"
     }
 
     // MARK: - Init
@@ -123,6 +127,8 @@ class LicenseManager {
         activationDate = d.object(forKey: Keys.activationDate) as? Date
         dailyDownloadCount = d.integer(forKey: Keys.dailyDownloadCount)
         lastDownloadDate = d.object(forKey: Keys.lastDownloadDate) as? Date
+        lastValidationDate = d.object(forKey: Keys.lastValidationDate) as? Date
+        lastValidationMessage = d.string(forKey: Keys.lastValidationMessage)
     }
 
     // MARK: - Gumroad License Activation
@@ -171,6 +177,8 @@ class LicenseManager {
                 licenseKey = trimmedKey
                 instanceID = trimmedKey // Gumroad uses the key itself as the identifier
                 activationDate = Date()
+                lastValidationDate = Date()
+                lastValidationMessage = "License activated and validated."
                 save()
                 return .success
 
@@ -201,6 +209,7 @@ class LicenseManager {
         licenseKey = ""
         instanceID = ""
         activationDate = nil
+        lastValidationMessage = "License removed from this Mac."
         save()
     }
 
@@ -228,19 +237,26 @@ class LicenseManager {
             let (data, _) = try await URLSession.shared.data(for: request)
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
             let success = json["success"] as? Bool ?? false
+            lastValidationDate = Date()
 
             if success {
+                lastValidationMessage = "License validated successfully."
+                save()
                 return true
             } else {
                 // License is no longer valid — clear it
                 licenseKey = ""
                 instanceID = ""
                 activationDate = nil
+                lastValidationMessage = "License validation failed. Pro was removed on this Mac."
                 save()
                 return false
             }
         } catch {
             // Network error — don't revoke, just return current state
+            lastValidationDate = Date()
+            lastValidationMessage = "Could not reach Gumroad. Using your last known license state."
+            save()
             return isPro
         }
     }
@@ -273,5 +289,7 @@ class LicenseManager {
         d.set(activationDate, forKey: Keys.activationDate)
         d.set(dailyDownloadCount, forKey: Keys.dailyDownloadCount)
         d.set(lastDownloadDate, forKey: Keys.lastDownloadDate)
+        d.set(lastValidationDate, forKey: Keys.lastValidationDate)
+        d.set(lastValidationMessage, forKey: Keys.lastValidationMessage)
     }
 }

@@ -5,6 +5,14 @@
 
 import SwiftUI
 
+enum StatsTimeFilter: String, CaseIterable, Identifiable {
+    case all = "All Time"
+    case last30Days = "Last 30 Days"
+    case last7Days = "Last 7 Days"
+
+    var id: String { rawValue }
+}
+
 /// Pre-computed stats snapshot — built once per history change, not per SwiftUI body evaluation.
 struct StatsSnapshot {
     let totalDownloads: Int
@@ -67,9 +75,20 @@ struct StatsSnapshot {
 
 struct StatsView: View {
     var manager: DownloadManager
+    @State private var timeFilter: StatsTimeFilter = .all
 
     private var stats: StatsSnapshot {
-        StatsSnapshot(entries: manager.historyManager.entries)
+        let filteredEntries = manager.historyManager.entries.filter { entry in
+            switch timeFilter {
+            case .all:
+                return true
+            case .last30Days:
+                return entry.date >= Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? .distantPast
+            case .last7Days:
+                return entry.date >= Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? .distantPast
+            }
+        }
+        return StatsSnapshot(entries: filteredEntries)
     }
 
     var body: some View {
@@ -93,6 +112,14 @@ struct StatsView: View {
                 .frame(maxWidth: .infinity, minHeight: 400)
             } else {
                 VStack(alignment: .leading, spacing: 24) {
+                    Picker("Range", selection: $timeFilter) {
+                        ForEach(StatsTimeFilter.allCases) { filter in
+                            Text(filter.rawValue).tag(filter)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 360)
+
                     // Live Bandwidth
                     if manager.bandwidthHistory.contains(where: { $0 > 0 }) {
                         VStack(alignment: .leading, spacing: 8) {

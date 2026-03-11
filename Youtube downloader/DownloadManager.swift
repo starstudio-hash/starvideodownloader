@@ -75,6 +75,8 @@ class DownloadManager {
         appSupportDirectory().appendingPathComponent("queue-state.json")
     }()
 
+    private static let finalPathSentinel = "__STAR_FINAL_PATH__:"
+
     // MARK: - yt-dlp path
 
     var ytdlpPath: String {
@@ -536,19 +538,88 @@ class DownloadManager {
 
     /// Returns true if a download for this URL is already queued or in progress.
     func isDuplicate(url: String) -> Bool {
-        items.contains { item in
-            item.url == url && !matchesTerminalState(item.status)
+        let key = duplicateKey(for: url)
+        return items.contains { item in
+            duplicateKey(for: item) == key && !matchesTerminalState(item.status)
         }
     }
 
     func duplicateMessage(for url: String) -> String? {
-        if items.contains(where: { $0.url == url && !matchesTerminalState($0.status) }) {
+        let key = duplicateKey(for: url)
+        if items.contains(where: { duplicateKey(for: $0) == key && !matchesTerminalState($0.status) }) {
             return "This URL is already in your queue."
         }
-        if historyManager.entries.contains(where: { $0.url == url }) {
+        if historyManager.entries.contains(where: { historyDuplicateKey(for: $0) == key }) {
             return "This URL already exists in your download history."
         }
         return nil
+    }
+
+    private func historyDuplicateKey(for entry: HistoryEntry) -> String {
+        if let duplicateKey = entry.duplicateKey, !duplicateKey.isEmpty {
+            if let markerRange = duplicateKey.range(of: "#playlist-item=") {
+                let prefix = normalizedURLString(String(duplicateKey[..<markerRange.lowerBound]))
+                let suffix = String(duplicateKey[markerRange.lowerBound...])
+                return prefix + suffix
+            }
+            return normalizedURLString(duplicateKey)
+        }
+        return duplicateKey(for: entry.url)
+    }
+
+    private func duplicateKey(for item: DownloadItem) -> String {
+        duplicateKey(for: item.url, sourcePlaylistURL: item.sourcePlaylistURL, playlistIndex: item.playlistIndex)
+    }
+
+    private func duplicateKey(for url: String, sourcePlaylistURL: String? = nil, playlistIndex: Int? = nil) -> String {
+        if let sourcePlaylistURL, let playlistIndex {
+            return normalizedURLString(sourcePlaylistURL) + "#playlist-item=" + String(playlistIndex)
+        }
+        return normalizedURLString(url)
+    }
+
+    private func normalizedURLString(_ raw: String) -> String {
+        guard let url = URL(string: raw), var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+
+        components.fragment = nil
+        components.scheme = components.scheme?.lowercased()
+        components.host = components.host?.lowercased()
+
+        if components.port == 80 || components.port == 443 {
+            components.port = nil
+        }
+
+        let ignoredQueryNames: Set<String> = [
+            "feature", "si", "pp", "utm_source", "utm_medium", "utm_campaign",
+            "utm_term", "utm_content", "fbclid", "gclid", "t", "time_continue", "start"
+        ]
+        if let queryItems = components.queryItems, !queryItems.isEmpty {
+            components.queryItems = queryItems
+                .filter { !ignoredQueryNames.contains($0.name.lowercased()) }
+                .sorted {
+                    if $0.name == $1.name {
+                        return ($0.value ?? "") < ($1.value ?? "")
+                    }
+                    return $0.name < $1.name
+                }
+            if components.queryItems?.isEmpty == true {
+                components.queryItems = nil
+            }
+        }
+
+        var normalizedPath = components.percentEncodedPath
+        if normalizedPath.hasSuffix("/") && normalizedPath.count > 1 {
+            normalizedPath.removeLast()
+        }
+        components.percentEncodedPath = normalizedPath.isEmpty ? "/" : normalizedPath
+
+        return components.string?.lowercased() ?? raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func looksLikePlaylist(_ raw: String) -> Bool {
+        raw.contains("list=") || raw.contains("/playlist?")
     }
 
     private func matchesTerminalState(_ status: DownloadStatus) -> Bool {
@@ -565,6 +636,7 @@ class DownloadManager {
     @discardableResult
     func addDownload(url: String, quality: VideoQuality? = nil, format: OutputFormat? = nil,
                      subtitles: Bool? = nil, playlistDownload: Bool = false,
+                     sourcePlaylistURL: String? = nil,
                      scheduledStartDate: Date? = nil) -> Bool {
         // Enforce license: check daily download limit for free users
         if let lm = licenseManager, !lm.hasFullAccess, !lm.canDownload {
@@ -585,6 +657,7 @@ class DownloadManager {
             format: format ?? settings.defaultFormat,
             subtitles: subtitles ?? settings.downloadSubtitlesByDefault,
             playlistDownload: playlistDownload,
+            sourcePlaylistURL: sourcePlaylistURL,
             scheduledStartDate: scheduledStartDate
         )
         items.append(item)
@@ -600,7 +673,7 @@ class DownloadManager {
 
     /// Fetches all video URLs from a playlist, then enqueues each as an individual download.
     func addPlaylistDownload(url: String, quality: VideoQuality? = nil, format: OutputFormat? = nil,
-                             subtitles: Bool? = nil) {
+                             subtitles: Bool? = nil, selectedEntries: [PlaylistEntryPreview]? = nil) {
         // Enforce license: playlists require full access
         if let lm = licenseManager, !lm.hasFullAccess {
             return
@@ -632,7 +705,9 @@ class DownloadManager {
                     return
                 }
 
-                guard !result.entries.isEmpty else {
+                let entriesToQueue = selectedEntries ?? result.entries
+
+                guard !entriesToQueue.isEmpty else {
                     // Put placeholder back with error message so user sees something
                     placeholder.title = "No videos found in playlist"
                     placeholder.status = .failed("The playlist appears to be empty or private.")
@@ -642,23 +717,95 @@ class DownloadManager {
                 }
 
                 // Enqueue each video as its own DownloadItem
-                for entry in result.entries {
+                for entry in entriesToQueue {
                     let item = DownloadItem(
-                        url: entry.url,
+                        url: entry.webpageURL ?? url,
                         quality: q,
                         format: fmt,
                         subtitles: subs,
                         playlistDownload: false,
                         playlistTitle: result.title,
-                        playlistIndex: entry.index
+                        playlistIndex: entry.index,
+                        sourcePlaylistURL: url
                     )
                     item.title = entry.title
+                    item.channelName = entry.channel ?? ""
+                    item.duration = entry.durationText ?? ""
                     self.items.append(item)
-                    self.prefetchMetadataIfNeeded(for: item)
+                    if entry.webpageURL != nil {
+                        self.prefetchMetadataIfNeeded(for: item)
+                    }
                     self.enqueueOrStart(item)
                 }
                 self.scheduleQueuePersistence()
                 self.setupScheduler()
+            }
+        }
+    }
+
+    func inspectURL(url: String, completion: @escaping (Result<URLInspectionResult, URLInspectionError>) -> Void) {
+        if looksLikePlaylist(url) {
+            inspectPlaylist(url: url, completion: completion)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            guard self.isYtdlpInstalled else {
+                DispatchQueue.main.async {
+                    completion(.failure(.message("yt-dlp is not installed.")))
+                }
+                return
+            }
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: self.ytdlpPath)
+            process.arguments = ["--dump-single-json", "--skip-download", "--no-playlist", "--no-warnings", url]
+            process.environment = self.buildCleanEnvironment()
+
+            let stdout = Pipe()
+            process.standardOutput = stdout
+            process.standardError = Pipe()
+
+            do {
+                try process.run()
+            } catch {
+                DispatchQueue.main.async {
+                    completion(.failure(.message("Could not inspect that URL.")))
+                }
+                return
+            }
+
+            process.waitUntilExit()
+
+            guard process.terminationStatus == 0 else {
+                DispatchQueue.main.async {
+                    completion(.failure(.message("Could not inspect that URL.")))
+                }
+                return
+            }
+
+            let data = stdout.fileHandleForReading.readDataToEndOfFile()
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                DispatchQueue.main.async {
+                    completion(.failure(.message("Could not inspect that URL.")))
+                }
+                return
+            }
+
+            let inspection = URLInspectionResult(
+                title: (json["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                channel: ((json["channel"] as? String) ?? (json["uploader"] as? String))?.trimmingCharacters(in: .whitespacesAndNewlines),
+                durationText: (json["duration"] as? Int).map(self.formatDuration),
+                thumbnailURL: (json["thumbnail"] as? String).flatMap(URL.init(string:)),
+                isLiveStream: (json["is_live"] as? Bool) ?? false,
+                isPlaylist: false,
+                playlistTitle: nil,
+                playlistCount: 0
+            )
+
+            DispatchQueue.main.async {
+                completion(.success(inspection))
             }
         }
     }
@@ -681,7 +828,8 @@ class DownloadManager {
                 isLiveStream: false,
                 isPlaylist: true,
                 playlistTitle: result.title,
-                playlistCount: result.entries.count
+                playlistCount: result.entries.count,
+                playlistEntries: result.entries
             )
             DispatchQueue.main.async {
                 completion(.success(inspection))
@@ -935,7 +1083,7 @@ class DownloadManager {
 
     private struct PlaylistFetchResult {
         var title: String
-        var entries: [(url: String, title: String, index: Int)]
+        var entries: [PlaylistEntryPreview]
     }
 
     private func fetchPlaylistEntries(url: String) -> PlaylistFetchResult? {
@@ -969,27 +1117,39 @@ class DownloadManager {
 
         let playlistTitle = (json["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
         let entries = json["entries"] as? [[String: Any]] ?? []
-        let normalizedEntries = entries.enumerated().compactMap { offset, entry -> (String, String, Int)? in
+        let normalizedEntries = entries.enumerated().compactMap { offset, entry -> PlaylistEntryPreview? in
             let title = (entry["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
             let index = entry["playlist_index"] as? Int ?? (offset + 1)
 
-            if let webpageURL = entry["url"] as? String, webpageURL.starts(with: "http") {
-                return (webpageURL, title ?? webpageURL, index)
+            let webpageURLCandidates = [
+                entry["webpage_url"] as? String,
+                entry["original_url"] as? String,
+                entry["url"] as? String
+            ]
+            let webpageURL = webpageURLCandidates
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .first(where: { $0.hasPrefix("http://") || $0.hasPrefix("https://") })
+
+            let channel = ((entry["channel"] as? String) ?? (entry["uploader"] as? String))?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let durationText: String?
+            if let duration = entry["duration"] as? Int {
+                durationText = formatDuration(duration)
+            } else if let duration = entry["duration"] as? Double {
+                durationText = formatDuration(Int(duration))
+            } else {
+                durationText = nil
             }
 
-            let videoID = entry["id"] as? String ?? ""
-            guard !videoID.isEmpty else { return nil }
-            let extractor = (entry["extractor_key"] as? String ?? "").lowercased()
-            let resolvedURL: String
-            switch extractor {
-            case "vimeo":
-                resolvedURL = "https://vimeo.com/\(videoID)"
-            case "tiktok":
-                resolvedURL = "https://www.tiktok.com/@video/\(videoID)"
-            default:
-                resolvedURL = "https://www.youtube.com/watch?v=\(videoID)"
-            }
-            return (resolvedURL, title ?? videoID, index)
+            let displayTitle = title?.isEmpty == false ? title! : "Video \(index)"
+            return PlaylistEntryPreview(
+                sourcePlaylistURL: url,
+                title: displayTitle,
+                index: index,
+                webpageURL: webpageURL,
+                channel: channel,
+                durationText: durationText
+            )
         }
 
         return PlaylistFetchResult(title: playlistTitle?.isEmpty == false ? playlistTitle! : "Playlist", entries: normalizedEntries)
@@ -998,6 +1158,7 @@ class DownloadManager {
     private func prefetchMetadataIfNeeded(for item: DownloadItem) {
         guard isYtdlpInstalled else { return }
         guard item.playlistTitle == nil else { return }
+        guard item.sourcePlaylistURL == nil else { return }
 
         let ytdlp = ytdlpPath
         let env = buildCleanEnvironment()
@@ -1146,11 +1307,12 @@ class DownloadManager {
         updateDockBadge()
 
         // Snapshot all item properties we need before leaving main thread
-        let url = item.url
+        let downloadSourceURL = item.sourcePlaylistURL ?? item.url
         let fmt = item.format
         let quality = item.quality
         let subtitles = item.subtitles
-        let isPlaylist = item.playlistDownload
+        let forcedPlaylistIndex = item.sourcePlaylistURL != nil ? item.playlistIndex : nil
+        let isPlaylist = item.playlistDownload || forcedPlaylistIndex != nil
         let outDir = settings.outputDirectory
         let ytdlp = ytdlpPath
         let macCompat = settings.macCompatibleEncoding
@@ -1187,11 +1349,12 @@ class DownloadManager {
             guard let self else { return }
             self.runYtdlp(
                 item: item,
-                url: url,
+                url: downloadSourceURL,
                 format: fmt,
                 quality: quality,
                 subtitles: subtitles,
                 isPlaylist: isPlaylist,
+                forcedPlaylistIndex: forcedPlaylistIndex,
                 outputDirectory: outDir,
                 ytdlpPath: ytdlp,
                 macCompatible: macCompat,
@@ -1238,6 +1401,7 @@ class DownloadManager {
         quality: VideoQuality,
         subtitles: Bool,
         isPlaylist: Bool,
+        forcedPlaylistIndex: Int? = nil,
         outputDirectory: URL,
         ytdlpPath: String,
         macCompatible: Bool,
@@ -1282,11 +1446,15 @@ class DownloadManager {
             args += ["-f", quality.ytdlpFormat, "--merge-output-format", mergeExt]
         }
 
+        args += ["--continue", "--part", "--print", "after_move:\(Self.finalPathSentinel)%(filepath)s"]
+
         if subtitles {
             args += ["--write-subs", "--write-auto-subs", "--sub-langs", "all"]
         }
 
-        if !isPlaylist {
+        if let forcedPlaylistIndex {
+            args += ["--playlist-items", "\(forcedPlaylistIndex)"]
+        } else if !isPlaylist {
             args += ["--no-playlist"]
         }
 
@@ -1326,7 +1494,7 @@ class DownloadManager {
         if concurrentFragments > 1 {
             args += ["--concurrent-fragments", "\(concurrentFragments)"]
         }
-        if !playlistItems.isEmpty {
+        if forcedPlaylistIndex == nil, !playlistItems.isEmpty {
             args += ["--playlist-items", playlistItems]
         }
         if !matchFilter.isEmpty {
@@ -1945,6 +2113,13 @@ class DownloadManager {
             return (nil, nil, nil, nil, true)
         }
 
+        if line.hasPrefix(finalPathSentinel) {
+            let path = String(line.dropFirst(finalPathSentinel.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !path.isEmpty {
+                return (nil, URL(fileURLWithPath: path), nil, nil, nil)
+            }
+        }
+
         // Progress: [download]  45.3% of 123.45MiB at 2.34MiB/s ETA 00:30
         if line.contains("[download]") && line.contains("%") {
             let parts = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
@@ -2162,6 +2337,8 @@ class DownloadManager {
     func exportQueue() -> Data? {
         struct QueueEntry: Codable {
             let url: String
+            let sourcePlaylistURL: String?
+            let playlistIndex: Int?
             let quality: String
             let format: String
             let subtitles: Bool
@@ -2179,6 +2356,8 @@ class DownloadManager {
             }
             return QueueEntry(
                 url: item.url,
+                sourcePlaylistURL: item.sourcePlaylistURL,
+                playlistIndex: item.playlistIndex,
                 quality: item.quality.rawValue,
                 format: item.format.rawValue,
                 subtitles: item.subtitles,
@@ -2192,9 +2371,98 @@ class DownloadManager {
         return try? encoder.encode(entries)
     }
 
+    func exportSupportBundle() -> Data? {
+        let bundle = Bundle.main
+        let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
+        let licenseSnapshot: [String: Any]
+        if let licenseManager {
+            let maskedKey: String
+            if licenseManager.licenseKey.count > 8 {
+                maskedKey = String(licenseManager.licenseKey.prefix(4)) + "…" + String(licenseManager.licenseKey.suffix(4))
+            } else if !licenseManager.licenseKey.isEmpty {
+                maskedKey = "Present"
+            } else {
+                maskedKey = ""
+            }
+            licenseSnapshot = [
+                "tier": licenseManager.isPro ? "Pro" : "Free",
+                "maskedKey": maskedKey,
+                "activationDate": licenseManager.activationDate?.ISO8601Format() ?? "",
+                "dailyDownloadsRemaining": licenseManager.dailyDownloadsRemaining,
+                "lastValidationDate": licenseManager.lastValidationDate?.ISO8601Format() ?? "",
+                "lastValidationMessage": licenseManager.lastValidationMessage ?? ""
+            ]
+        } else {
+            licenseSnapshot = [:]
+        }
+
+        let queueSnapshot = items.map { item in
+            [
+                "title": item.title,
+                "url": item.url,
+                "sourcePlaylistURL": item.sourcePlaylistURL ?? "",
+                "status": item.status.displayText,
+                "playlistTitle": item.playlistTitle ?? "",
+                "playlistIndex": item.playlistIndex ?? 0,
+                "scheduledStartDate": item.scheduledStartDate?.ISO8601Format() ?? "",
+                "outputPath": item.outputPath?.path ?? "",
+                "integrityWarning": item.integrityWarning ?? ""
+            ]
+        }
+
+        let failedItems = items.compactMap { item -> [String: Any]? in
+            guard case .failed(let message) = item.status else { return nil }
+            return [
+                "title": item.title,
+                "url": item.url,
+                "message": message
+            ]
+        }
+
+        let payload: [String: Any] = [
+            "generatedAt": Date().ISO8601Format(),
+            "appVersion": version,
+            "buildNumber": build,
+            "macOSVersion": ProcessInfo.processInfo.operatingSystemVersionString,
+            "ytDlpPath": ytdlpPath,
+            "ffmpegPath": conversionManager.ffmpegPath,
+            "backendHealthIssues": backendHealthIssues.map {
+                [
+                    "severity": $0.severity.rawValue,
+                    "title": $0.title,
+                    "message": $0.message
+                ]
+            },
+            "settings": [
+                "outputDirectory": settings.outputDirectory.path,
+                "defaultQuality": settings.defaultQuality.rawValue,
+                "defaultFormat": settings.defaultFormat.rawValue,
+                "maxConcurrentDownloads": settings.maxConcurrentDownloads,
+                "duplicateHandling": settings.duplicateHandling.rawValue,
+                "clipboardMonitoring": settings.clipboardMonitoring,
+                "scheduledDownloadEnabled": settings.scheduledDownloadEnabled,
+                "downloadArchive": settings.useDownloadArchive,
+                "cookiesBrowser": settings.cookiesFromBrowser,
+                "cookiesFileConfigured": !settings.cookiesFilePath.isEmpty
+            ],
+            "license": licenseSnapshot,
+            "queue": queueSnapshot,
+            "recentFailures": failedItems,
+            "historyCount": historyManager.entries.count,
+            "conversionQueueCount": conversionManager.items.count,
+            "repairQueueCount": repairManager.items.count
+        ]
+
+        guard JSONSerialization.isValidJSONObject(payload) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+    }
+
     func importQueue(from data: Data) {
         struct QueueEntry: Codable {
             let url: String
+            let sourcePlaylistURL: String?
+            let playlistIndex: Int?
             let quality: String
             let format: String
             let subtitles: Bool
@@ -2212,8 +2480,15 @@ class DownloadManager {
                     quality: q,
                     format: f,
                     subtitles: entry.subtitles,
+                    sourcePlaylistURL: entry.sourcePlaylistURL,
                     scheduledStartDate: entry.scheduledStartDate
                 )
+                if let sourcePlaylistURL = entry.sourcePlaylistURL,
+                   let playlistIndex = entry.playlistIndex,
+                   let addedItem = items.last {
+                    addedItem.sourcePlaylistURL = sourcePlaylistURL
+                    addedItem.playlistIndex = playlistIndex
+                }
             }
         }
     }

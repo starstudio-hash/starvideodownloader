@@ -29,6 +29,20 @@ struct URLInspectionResult {
     var isPlaylist: Bool
     var playlistTitle: String?
     var playlistCount: Int
+    var playlistEntries: [PlaylistEntryPreview] = []
+}
+
+struct PlaylistEntryPreview: Identifiable, Codable, Hashable {
+    var sourcePlaylistURL: String
+    var title: String
+    var index: Int
+    var webpageURL: String?
+    var channel: String?
+    var durationText: String?
+
+    var id: String {
+        "\(sourcePlaylistURL)#\(index)"
+    }
 }
 
 enum URLInspectionError: LocalizedError {
@@ -107,6 +121,7 @@ struct PersistedDownloadStatus: Codable {
 
 struct PersistedDownloadItem: Codable {
     var url: String
+    var sourcePlaylistURL: String?
     var title: String
     var thumbnail: String?
     var channelName: String
@@ -128,6 +143,7 @@ struct PersistedDownloadItem: Codable {
 
     init(item: DownloadItem) {
         url = item.url
+        sourcePlaylistURL = item.sourcePlaylistURL
         title = item.title
         thumbnail = item.thumbnail?.absoluteString
         channelName = item.channelName
@@ -157,6 +173,7 @@ struct PersistedDownloadItem: Codable {
             playlistDownload: playlistDownload,
             playlistTitle: playlistTitle,
             playlistIndex: playlistIndex,
+            sourcePlaylistURL: sourcePlaylistURL,
             scheduledStartDate: scheduledStartDate
         )
         item.title = title
