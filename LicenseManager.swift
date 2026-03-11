@@ -259,6 +259,8 @@ class LicenseManager {
         guard let lastDate = lastDownloadDate else { return }
         if !Calendar.current.isDateInToday(lastDate) {
             dailyDownloadCount = 0
+            lastDownloadDate = nil
+            save()
         }
     }
 

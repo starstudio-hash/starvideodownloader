@@ -162,9 +162,7 @@ class RepairManager {
         let ffmpeg = ffmpegPath
         let env = buildCleanEnvironment()
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self else { return }
-
+        DispatchQueue.global(qos: .userInitiated).async {
             var issues: [String] = []
 
             // 1. Run ffprobe to get format and stream info

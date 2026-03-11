@@ -140,7 +140,6 @@ struct BatchURLInputView: View {
                                 format: selectedFormat,
                                 subtitles: downloadSubtitles
                             )
-                            license.recordDownload()
                         }
                     }
                     dismiss()

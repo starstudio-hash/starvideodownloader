@@ -748,7 +748,6 @@ struct ContentView: View {
                 subtitles: downloadSubtitles,
                 playlistDownload: false
             )
-            license.recordDownload()
         }
         urlInput = ""
     }

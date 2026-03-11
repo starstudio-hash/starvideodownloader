@@ -88,6 +88,11 @@ struct Youtube_downloaderApp: App {
                 }
                 .keyboardShortcut("2", modifiers: .command)
 
+                Button("Repair") {
+                    NotificationCenter.default.post(name: .switchTab, object: AppTab.repair)
+                }
+                .keyboardShortcut("5", modifiers: .command)
+
                 Button("History") {
                     NotificationCenter.default.post(name: .switchTab, object: AppTab.history)
                 }

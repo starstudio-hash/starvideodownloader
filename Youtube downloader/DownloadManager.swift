@@ -403,11 +403,12 @@ class DownloadManager {
 
     // MARK: - Public API
 
+    @discardableResult
     func addDownload(url: String, quality: VideoQuality? = nil, format: OutputFormat? = nil,
-                     subtitles: Bool? = nil, playlistDownload: Bool = false) {
+                     subtitles: Bool? = nil, playlistDownload: Bool = false) -> Bool {
         // Enforce license: check daily download limit for free users
         if let lm = licenseManager, !lm.hasFullAccess, !lm.canDownload {
-            return
+            return false
         }
 
         // Enforce license: clamp quality to allowed tier
@@ -427,6 +428,10 @@ class DownloadManager {
         )
         items.append(item)
         enqueueOrStart(item)
+        if let lm = licenseManager, !lm.hasFullAccess {
+            lm.recordDownload()
+        }
+        return true
     }
 
     /// Fetches all video URLs from a playlist, then enqueues each as an individual download.
