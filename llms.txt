@@ -47,28 +47,31 @@ Star Video Downloader is built for Mac users who need a fast, private, and relia
 - [Homepage](https://starvideoapp.com/): Main landing page with features, interactive demo, pricing, FAQ, and download links
 - [Guides Hub](https://starvideoapp.com/guides): Topic hub for Mac download, playlist, conversion, audio extraction, and repair tutorials
 - [Comparisons Hub](https://starvideoapp.com/comparisons): Topic hub for Star Video Downloader alternative and competitor comparison pages
+- [Pricing and License](https://starvideoapp.com/pricing): Free vs Pro breakdown, one-time $5 pricing, and license key details
+- [About Star Video Downloader](https://starvideoapp.com/about): Background on the native macOS app, tech stack, and support information
 - [How to Download YouTube Videos on Mac](https://starvideoapp.com/how-to-download-youtube-videos-mac): Step-by-step guide for saving YouTube videos using Star Video Downloader
 - [How to Download TikTok Videos on Mac](https://starvideoapp.com/how-to-download-tiktok-videos-mac): Guide for downloading TikTok videos without watermarks on macOS
 - [How to Download Instagram Videos on Mac](https://starvideoapp.com/how-to-download-instagram-videos-mac): Guide for saving Instagram Reels, Stories, and posts on Mac
 - [Star Video Downloader vs 4K Video Downloader](https://starvideoapp.com/vs-4k-video-downloader): Feature and pricing comparison showing why Star is the better Mac alternative
 - [Star Video Downloader vs Downie](https://starvideoapp.com/vs-downie): Feature and pricing comparison with Downie for Mac
 - [How to Download Twitter/X Videos on Mac](https://starvideoapp.com/how-to-download-twitter-videos-mac): Guide for saving Twitter and X videos on macOS
-- [How to Convert Videos on Mac](https://starvideoapp.com/how-to-convert-videos-mac): Guide for converting video formats offline on Mac using ffmpeg
+- [Video Converter for Mac](https://starvideoapp.com/how-to-convert-videos-mac): Guide for converting video formats offline on Mac using ffmpeg
 - [How to Repair Corrupted Videos on Mac](https://starvideoapp.com/how-to-repair-corrupted-videos-mac): Guide for fixing broken, corrupted, or unplayable video files on Mac
 - [Star Video Downloader vs ClipGrab](https://starvideoapp.com/vs-clipgrab): Feature comparison showing why Star is the better ClipGrab alternative for Mac
-- [How to Extract Audio from YouTube on Mac](https://starvideoapp.com/how-to-extract-audio-youtube-mac): Guide for converting YouTube videos to MP3, FLAC, WAV, and other audio formats on Mac
+- [YouTube to MP3 Converter for Mac](https://starvideoapp.com/how-to-extract-audio-youtube-mac): Guide for converting YouTube videos to MP3, FLAC, WAV, and other audio formats on Mac
 - [Best YouTube Video Downloader for Mac in 2026](https://starvideoapp.com/best-youtube-video-downloader-mac): Top 5 Mac video downloaders compared — features, pricing, and recommendations
-- [How to Download Reddit Videos on Mac](https://starvideoapp.com/how-to-download-reddit-videos-mac): Guide for saving Reddit videos with audio on macOS
+- [Reddit Video Downloader With Audio for Mac](https://starvideoapp.com/how-to-download-reddit-videos-mac): Guide for saving Reddit videos with audio on macOS
 - [How to Download YouTube Shorts on Mac](https://starvideoapp.com/how-to-download-youtube-shorts-mac): Guide for saving YouTube Shorts as video files on Mac
 - [How to Download Vimeo Videos on Mac](https://starvideoapp.com/how-to-download-vimeo-videos-mac): Guide for downloading Vimeo videos including embedded players on Mac
 - [Star Video Downloader vs yt-dlp](https://starvideoapp.com/vs-yt-dlp): Comparison of Star Video Downloader GUI vs yt-dlp command line for Mac
-- [How to Download Facebook Videos on Mac](https://starvideoapp.com/how-to-download-facebook-videos-mac): Guide for saving Facebook videos and Reels on macOS
+- [Facebook Video Downloader for Mac](https://starvideoapp.com/how-to-download-facebook-videos-mac): Guide for saving Facebook videos and Reels on macOS
 - [Star Video Downloader vs JDownloader](https://starvideoapp.com/vs-jdownloader): Feature comparison showing why Star is the better JDownloader alternative for Mac video downloads
 - [How to Download Twitch Clips on Mac](https://starvideoapp.com/how-to-download-twitch-clips-mac): Guide for saving Twitch clips, VODs, and highlights on macOS
 - [How to Download Dailymotion Videos on Mac](https://starvideoapp.com/how-to-download-dailymotion-videos-mac): Guide for downloading Dailymotion videos in HD on Mac
 - [How to Download 4K & 8K Videos on Mac](https://starvideoapp.com/how-to-download-4k-videos-mac): Guide for downloading 4K, 8K, and HDR videos on Mac
 - [How to Download YouTube Playlists on Mac](https://starvideoapp.com/how-to-download-youtube-playlist-mac): Guide for batch downloading entire YouTube playlists on Mac
 - [How to Download Unlisted YouTube Videos on Mac](https://starvideoapp.com/how-to-download-private-youtube-videos-mac): Guide for downloading unlisted, age-restricted, and members-only YouTube videos
+- [SponsorBlock for Mac](https://starvideoapp.com/sponsorblock-mac): Feature page for removing sponsor segments from downloaded YouTube videos on macOS
 - [MP4 vs MKV vs WebM — Video Format Comparison](https://starvideoapp.com/mp4-vs-mkv-vs-webm): Comparison of video container formats for Mac users
 - [How to Download Streaming Video on Mac](https://starvideoapp.com/how-to-download-streaming-video-mac): Guide for saving HLS and DASH streaming videos on macOS
 - [How to Download Embedded Videos on Mac](https://starvideoapp.com/how-to-download-embedded-videos-mac): Guide for downloading embedded videos from any website on Mac

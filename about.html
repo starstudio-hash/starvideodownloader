@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZHKRJPHSJF"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-ZHKRJPHSJF');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>About Star Video Downloader — Native Mac Video Downloader Built on yt-dlp and ffmpeg</title>
+    <meta name="description" content="Learn what Star Video Downloader is, why it exists, how it works on macOS, and how the app combines SwiftUI, yt-dlp, and ffmpeg into a native Mac workflow.">
+    <meta name="author" content="Star Video Downloader Editorial Team">
+    <meta name="publisher" content="Star Video Downloader">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://starvideoapp.com/about">
+    <meta property="og:title" content="About Star Video Downloader — Native Mac Video Downloader Built on yt-dlp and ffmpeg">
+    <meta property="og:description" content="Understand what the app does, how it works on macOS, and why the product focuses on a clean native workflow instead of browser clutter.">
+    <meta property="og:image" content="https://starvideoapp.com/screenshot.png">
+    <meta property="og:image:width" content="1798">
+    <meta property="og:image:height" content="1286">
+    <meta property="og:image:alt" content="Star Video Downloader app interface on macOS">
+    <meta property="og:site_name" content="Star Video Downloader">
+    <meta property="og:locale" content="en_US">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://starvideoapp.com/about">
+    <meta name="twitter:title" content="About Star Video Downloader">
+    <meta name="twitter:description" content="Learn what Star Video Downloader is, why it exists, and how the native Mac app uses yt-dlp and ffmpeg under the hood.">
+    <meta name="twitter:image" content="https://starvideoapp.com/screenshot.png">
+    <meta name="twitter:image:alt" content="Star Video Downloader app interface on macOS">
+
+    <link rel="canonical" href="https://starvideoapp.com/about">
+    <link rel="alternate" hreflang="en" href="https://starvideoapp.com/about">
+    <link rel="alternate" hreflang="x-default" href="https://starvideoapp.com/about">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="theme-color" content="#2563eb">
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "AboutPage",
+          "name": "About Star Video Downloader",
+          "description": "Background information about the Star Video Downloader app and website.",
+          "url": "https://starvideoapp.com/about",
+          "datePublished": "2026-03-11",
+          "dateModified": "2026-03-11",
+          "publisher": {
+            "@type": "Organization",
+            "name": "Star Video Downloader",
+            "url": "https://starvideoapp.com/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://starvideoapp.com/icon.png"
+            }
+          }
+        },
+        {
+          "@type": "Organization",
+          "name": "Star Video Downloader",
+          "url": "https://starvideoapp.com/",
+          "logo": "https://starvideoapp.com/icon.png",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "email": "support@starvideoapp.com",
+            "contactType": "customer support"
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://starvideoapp.com/" },
+            { "@type": "ListItem", "position": 2, "name": "About", "item": "https://starvideoapp.com/about" }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <link rel="preconnect" href="https://www.googletagmanager.com">
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page-hero { background: linear-gradient(135deg, #111827 0%, #1d4ed8 100%); color: white; padding: 80px 0 60px; text-align: center; }
+        .page-hero h1 { font-size: clamp(30px, 4vw, 48px); font-weight: 800; margin-bottom: 16px; line-height: 1.15; }
+        .page-hero p { font-size: 18px; opacity: 0.88; max-width: 760px; margin: 0 auto 28px; line-height: 1.6; }
+        .page-section { padding: 80px 0; }
+        .page-section:nth-child(even) { background: var(--gray-50); }
+        .prose { max-width: 860px; margin: 0 auto; }
+        .prose h2 { font-size: 30px; font-weight: 800; margin: 0 0 16px; color: var(--gray-900); }
+        .prose p { font-size: 16px; line-height: 1.8; color: var(--gray-600); margin-bottom: 16px; }
+        .meta-line { font-size: 14px; color: var(--gray-400); margin-bottom: 32px; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-top: 28px; }
+        .info-card { background: white; border: 1px solid var(--gray-200); border-radius: 16px; padding: 24px; }
+        .info-card h3 { font-size: 18px; font-weight: 700; margin: 0 0 10px; color: var(--gray-900); }
+        .info-card p { margin: 0; font-size: 15px; color: var(--gray-500); line-height: 1.7; }
+        .callout { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; border-radius: 18px; padding: 28px; margin-top: 24px; }
+        .callout p { margin: 0; color: #1e3a8a; }
+        .cta-box { background: linear-gradient(135deg, #1d4ed8, #1e3a8a); color: white; border-radius: 18px; padding: 44px; text-align: center; margin-top: 40px; }
+        .cta-box h2 { font-size: 30px; font-weight: 800; margin-bottom: 12px; }
+        .cta-box p { color: rgba(255,255,255,0.82); margin-bottom: 24px; }
+        .cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .breadcrumb { padding: 16px 0; font-size: 14px; color: var(--gray-500); }
+        .breadcrumb a { color: var(--blue-600); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <img src="icon.png" alt="Star Video Downloader logo" class="logo-icon" width="32" height="32">
+                <span>Star Video Downloader</span>
+            </a>
+            <div class="nav-links">
+                <a href="/guides">Guides</a>
+                <a href="/comparisons">Comparisons</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/about">About</a>
+                <a href="/#contact">Contact</a>
+                <a href="https://github.com/starstudio-hash/starvideodownloader/releases/download/starvideodownloader1/Star.Video.Downloader.zip" class="btn btn-primary btn-sm">Download Free</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="page-hero">
+        <div class="container">
+            <h1>About Star Video Downloader</h1>
+            <p>Star Video Downloader is a native macOS app for downloading, converting, and repairing videos without needing Terminal, browser extensions, or ad-filled downloader sites.</p>
+            <div class="cta-actions">
+                <a href="https://github.com/starstudio-hash/starvideodownloader/releases/download/starvideodownloader1/Star.Video.Downloader.zip" class="btn btn-primary btn-lg">Download Free</a>
+                <a href="/pricing" class="btn btn-secondary btn-lg" style="background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.35); color:white;">View Pricing</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="/">Home</a> &rsaquo; About
+        </nav>
+    </div>
+
+    <section class="page-section">
+        <div class="container">
+            <div class="prose">
+                <p class="meta-line">Published March 11, 2026</p>
+                <h2>What the app is</h2>
+                <p>Star Video Downloader is built for Mac users who want a clean desktop workflow for saving videos from YouTube and 1000+ other sites. Instead of using Terminal commands, copy-paste URLs, quality pickers, queue controls, conversion tools, and repair tools all live inside a native macOS interface.</p>
+                <p>The app has a free tier for everyday downloads and a one-time Pro upgrade for higher resolutions, playlists, batch input, conversion, repair, SponsorBlock, subtitles, and chapters.</p>
+
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Platform</h3>
+                        <p>macOS 14 or later, with native support for Apple Silicon and Intel Macs.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Core stack</h3>
+                        <p>SwiftUI for the app interface, yt-dlp for downloading, and ffmpeg for conversion and repair workflows.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Supported sites</h3>
+                        <p>YouTube, Reddit, Facebook, Vimeo, TikTok, Instagram, Twitter/X, Twitch, Dailymotion, and many more.</p>
+                    </div>
+                </div>
+
+                <h2>Why it exists</h2>
+                <p>Many video download tools for Mac fall into one of two extremes: powerful but command-line-heavy, or easy-looking but cluttered with ads, bundled software, upload limits, and weak privacy practices. Star Video Downloader exists to bridge that gap with a focused Mac app that feels simple on the surface while still using proven download and media-processing tools underneath.</p>
+
+                <h2>How it works on Mac</h2>
+                <p>The app uses <strong>yt-dlp</strong> as its download engine, then uses <strong>ffmpeg</strong> for post-processing tasks like conversion, audio extraction, and repair. The SwiftUI interface adds queue management, visual quality selection, settings, and productized flows that make those tools practical for people who do not want to work in Terminal.</p>
+
+                <div class="callout">
+                    <p>The result is not a browser trick or a thin wrapper around a website. It is a native desktop workflow designed for Mac users who want local processing and a cleaner experience.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page-section">
+        <div class="container">
+            <div class="prose">
+                <h2>What this website covers</h2>
+                <p>This website is the marketing and documentation layer around the app. It includes step-by-step guides, comparison pages, pricing details, and feature pages so Mac users can find the right workflow from Google and then move into the app itself.</p>
+                <p>The guide pages focus on real Mac download tasks such as YouTube playlists, Facebook videos, Reddit videos with audio, video conversion, and corrupted-file repair. Comparison pages explain how the app differs from alternatives like 4K Video Downloader, Downie, ClipGrab, yt-dlp, and JDownloader.</p>
+
+                <h2>Privacy and support</h2>
+                <p>The desktop app processes downloads locally on your Mac. This website uses Google Analytics for site measurement, but the product itself is positioned around a local desktop workflow rather than a browser-based downloader service.</p>
+                <p>If you need help with licensing, downloads, or product questions, contact <a href="mailto:support@starvideoapp.com" style="color:var(--blue-600);">support@starvideoapp.com</a>.</p>
+
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3>Start here</h3>
+                        <p><a href="/guides" style="color:var(--blue-600); text-decoration:none;">Browse the guides hub</a> if you want task-specific tutorials for YouTube, Reddit, Facebook, conversion, or repair.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Comparisons</h3>
+                        <p><a href="/comparisons" style="color:var(--blue-600); text-decoration:none;">Visit the comparisons hub</a> if you are still choosing between Star and other Mac downloaders.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Pricing</h3>
+                        <p><a href="/pricing" style="color:var(--blue-600); text-decoration:none;">See Free vs Pro pricing</a> if you want a clear breakdown of limits, features, and license key details.</p>
+                    </div>
+                </div>
+
+                <div class="cta-box">
+                    <h2>Want the Native Mac Workflow Instead of Web Downloader Clutter?</h2>
+                    <p>Download the app, try the free tier, and upgrade later only if you need playlists, conversion, repair, or SponsorBlock.</p>
+                    <div class="cta-actions">
+                        <a href="https://github.com/starstudio-hash/starvideodownloader/releases/download/starvideodownloader1/Star.Video.Downloader.zip" class="btn btn-primary btn-lg">Download Free</a>
+                        <a href="/pricing" class="btn btn-secondary btn-lg" style="background:rgba(255,255,255,0.14); border-color:rgba(255,255,255,0.35); color:white;">See Pricing</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <img src="icon.png" alt="Star Video Downloader" class="footer-icon" loading="lazy" width="24" height="24">
+                <span>Star Video Downloader</span>
+            </div>
+            <div class="footer-right">
+                <a href="/">Home</a>
+                <a href="/guides">Guides</a>
+                <a href="/comparisons">Comparisons</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/about">About</a>
+                <a href="mailto:support@starvideoapp.com">Contact</a>
+                <a href="https://firaskam.gumroad.com/l/xxmkcc">Buy Pro</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
