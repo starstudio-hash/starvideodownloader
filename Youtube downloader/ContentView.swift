@@ -209,6 +209,8 @@ struct ContentView: View {
     private var headerBar: some View {
         HeaderBarView(
             activeCount: activeDownloadCount,
+            hasFullAccess: license.hasFullAccess,
+            dailyDownloadsRemaining: license.dailyDownloadsRemaining,
             hasActiveDownloads: manager.hasActiveDownloads,
             hasPausedItems: manager.hasPausedItems,
             totalBandwidth: manager.totalBandwidth,
@@ -1019,6 +1021,8 @@ struct ContentView: View {
 
 struct HeaderBarView: View {
     let activeCount: Int
+    let hasFullAccess: Bool
+    let dailyDownloadsRemaining: Int
     let hasActiveDownloads: Bool
     let hasPausedItems: Bool
     let totalBandwidth: String?
@@ -1036,6 +1040,8 @@ struct HeaderBarView: View {
                     .font(.headline)
                     .fontWeight(.semibold)
             }
+
+            tierBadge
 
             Spacer()
 
@@ -1095,6 +1101,31 @@ struct HeaderBarView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+
+    private var tierBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: hasFullAccess ? "checkmark.seal.fill" : "person.crop.circle.badge.questionmark")
+                .font(.system(size: 11))
+            Text(hasFullAccess ? "Pro" : "Free")
+                .font(.caption.weight(.semibold))
+            if !hasFullAccess {
+                Text("· \(dailyDownloadsRemaining) left today")
+                    .font(.caption)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background((hasFullAccess ? Color.blue : Color.secondary).opacity(0.12))
+        .foregroundStyle(hasFullAccess ? Color.blue : Color.secondary)
+        .clipShape(Capsule())
+        .help(hasFullAccess ? "Pro license active" : "Free tier active")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            hasFullAccess
+            ? "Pro license active"
+            : "Free tier active, \(dailyDownloadsRemaining) downloads left today"
+        )
     }
 }
 
