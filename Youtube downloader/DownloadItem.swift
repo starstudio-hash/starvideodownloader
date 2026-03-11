@@ -154,6 +154,8 @@ class DownloadItem: Identifiable {
     var integrityWarning: String?
     // Speed history for sparkline (last 20 samples in bytes/sec)
     var speedHistory: [Double] = []
+    // Optional per-item scheduler timestamp
+    var scheduledStartDate: Date?
 
     init(
         url: String,
@@ -162,7 +164,8 @@ class DownloadItem: Identifiable {
         subtitles: Bool = false,
         playlistDownload: Bool = false,
         playlistTitle: String? = nil,
-        playlistIndex: Int? = nil
+        playlistIndex: Int? = nil,
+        scheduledStartDate: Date? = nil
     ) {
         self.url = url
         self.title = url
@@ -176,5 +179,6 @@ class DownloadItem: Identifiable {
         self.playlistDownload = playlistDownload
         self.playlistTitle = playlistTitle
         self.playlistIndex = playlistIndex
+        self.scheduledStartDate = scheduledStartDate
     }
 }

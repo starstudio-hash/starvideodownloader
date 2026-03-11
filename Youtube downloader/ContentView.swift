@@ -31,6 +31,16 @@ enum StatusFilter: String, CaseIterable {
     case failed = "Failed"
 }
 
+enum QueueSortOption: String, CaseIterable, Identifiable {
+    case manual = "Manual"
+    case newest = "Newest"
+    case oldest = "Oldest"
+    case status = "Status"
+    case playlist = "Playlist"
+
+    var id: String { rawValue }
+}
+
 struct ContentView: View {
     @Environment(DownloadManager.self) private var manager
     @Environment(LicenseManager.self) private var license
@@ -44,6 +54,10 @@ struct ContentView: View {
     @State private var showInvalidURLAlert: Bool = false
     @State private var showInstallAlert: Bool = false
     @State private var showDuplicateAlert: Bool = false
+    @State private var duplicateAlertMessage: String = ""
+    @State private var duplicateAlertAllowsOverride: Bool = false
+    @State private var pendingDuplicateURL: String? = nil
+    @State private var pendingDuplicateIsPlaylist: Bool = false
     @State private var isDroppingURL: Bool = false
     @State private var showUpgradePrompt: Bool = false
     @State private var upgradeReason: UpgradeReason = .dailyLimitReached
@@ -53,10 +67,15 @@ struct ContentView: View {
     // Search & filter
     @State private var searchText: String = ""
     @State private var statusFilter: StatusFilter = .all
+    @State private var sortOption: QueueSortOption = .manual
     // Playlist confirmation
     @State private var pendingPlaylistURL: String? = nil
     @State private var pendingPlaylistItemCount: Int = 0
+    @State private var pendingPlaylistTitle: String? = nil
     @State private var showPlaylistConfirm: Bool = false
+    @State private var isInspectingPlaylist: Bool = false
+    @State private var showPlaylistInspectError: Bool = false
+    @State private var playlistInspectErrorMessage: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -135,11 +154,7 @@ struct ContentView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .clearCompleted)) { _ in
-            manager.items.removeAll { item in
-                if case .completed = item.status { return true }
-                if case .cancelled = item.status { return true }
-                return false
-            }
+            manager.clearCompleted()
         }
         .onReceive(NotificationCenter.default.publisher(for: .showSettings)) { _ in
             showSettings = true
@@ -149,10 +164,17 @@ struct ContentView: View {
                 selectedTab = tab
             }
         }
-        .alert("Already Downloading", isPresented: $showDuplicateAlert) {
-            Button("OK", role: .cancel) {}
+        .alert("Duplicate URL", isPresented: $showDuplicateAlert) {
+            if duplicateAlertAllowsOverride {
+                Button("Add Anyway") {
+                    forceSubmitDuplicate()
+                }
+            }
+            Button(duplicateAlertAllowsOverride ? "Cancel" : "OK", role: .cancel) {
+                clearPendingDuplicate()
+            }
         } message: {
-            Text("This URL is already in the download queue.")
+            Text(duplicateAlertMessage)
         }
         .alert("Download Entire Playlist?", isPresented: $showPlaylistConfirm) {
             Button("Download All \(pendingPlaylistItemCount > 0 ? "(\(pendingPlaylistItemCount) videos)" : "")") {
@@ -160,16 +182,25 @@ struct ContentView: View {
                     startPlaylistDownload(url: url)
                 }
                 pendingPlaylistURL = nil
+                pendingPlaylistTitle = nil
+                pendingPlaylistItemCount = 0
             }
             Button("Cancel", role: .cancel) {
                 pendingPlaylistURL = nil
+                pendingPlaylistTitle = nil
+                pendingPlaylistItemCount = 0
             }
         } message: {
             if pendingPlaylistItemCount > 0 {
-                Text("This will download \(pendingPlaylistItemCount) videos. Each video will be added to the queue and downloaded sequentially (up to \(manager.settings.maxConcurrentDownloads) at a time).")
+                Text("\(pendingPlaylistTitle ?? "This playlist") has \(pendingPlaylistItemCount) videos. Each video will be added to the queue and downloaded sequentially (up to \(manager.settings.maxConcurrentDownloads) at a time).")
             } else {
                 Text("This will download all videos in the playlist. Each video will be added to the queue and downloaded sequentially (up to \(manager.settings.maxConcurrentDownloads) at a time).")
             }
+        }
+        .alert("Playlist Inspection Failed", isPresented: $showPlaylistInspectError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(playlistInspectErrorMessage)
         }
     }
 
@@ -203,6 +234,10 @@ struct ContentView: View {
             // Setup banner when yt-dlp is not installed
             if !manager.isYtdlpInstalled {
                 setupBanner
+            }
+
+            if let summary = manager.backendHealthSummary, manager.isYtdlpInstalled {
+                backendHealthBanner(summary: summary)
             }
 
             Divider()
@@ -253,6 +288,29 @@ struct ContentView: View {
         }
         .padding(12)
         .background(Color.accentColor.opacity(0.06))
+    }
+
+    private func backendHealthBanner(summary: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: manager.hasBackendErrors ? "exclamationmark.triangle.fill" : "wrench.and.screwdriver.fill")
+                .foregroundStyle(manager.hasBackendErrors ? Color.orange : Color.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(manager.hasBackendErrors ? "Action Needed" : "Backend Check")
+                    .font(.callout.bold())
+                Text(summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Refresh") {
+                manager.refreshBackendHealth(checkVersions: true)
+            }
+            .buttonStyle(.plain)
+            .font(.caption)
+            .foregroundStyle(Color.accentColor)
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.08))
     }
 
     // MARK: - URL Input
@@ -331,11 +389,21 @@ struct ContentView: View {
                 Button {
                     submitDownload()
                 } label: {
-                    Label("Download", systemImage: "arrow.down.circle.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                    if isInspectingPlaylist {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Inspecting…")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                    } else {
+                        Label("Download", systemImage: "arrow.down.circle.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .keyboardShortcut(.return, modifiers: .command)
+                .disabled(isInspectingPlaylist)
             }
 
             // Options row
@@ -429,10 +497,16 @@ struct ContentView: View {
                         .foregroundStyle(license.dailyDownloadsRemaining <= 1 ? .red : .secondary)
                 }
 
-                Text("Output: \(manager.settings.outputDirectory.lastPathComponent)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if isInspectingPlaylist {
+                    Text("Inspecting playlist…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Output: \(manager.settings.outputDirectory.lastPathComponent)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
         }
         .padding(.horizontal, 16)
@@ -527,6 +601,26 @@ struct ContentView: View {
             }
         }
 
+        switch sortOption {
+        case .manual:
+            break
+        case .newest:
+            items.sort { $0.addedDate > $1.addedDate }
+        case .oldest:
+            items.sort { $0.addedDate < $1.addedDate }
+        case .status:
+            items.sort { statusRank($0.status) < statusRank($1.status) }
+        case .playlist:
+            items.sort {
+                let lhsTitle = $0.playlistTitle ?? "~"
+                let rhsTitle = $1.playlistTitle ?? "~"
+                if lhsTitle == rhsTitle {
+                    return ($0.playlistIndex ?? Int.max, $0.addedDate) < ($1.playlistIndex ?? Int.max, $1.addedDate)
+                }
+                return lhsTitle < rhsTitle
+            }
+        }
+
         return items
     }
 
@@ -551,6 +645,14 @@ struct ContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 5))
                 .frame(width: 160)
 
+                Picker("Sort", selection: $sortOption) {
+                    ForEach(QueueSortOption.allCases) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 110)
+
                 // Status filter
                 ForEach(StatusFilter.allCases, id: \.self) { filter in
                     Button {
@@ -573,12 +675,28 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                Button("Clear Completed") {
-                    manager.items.removeAll { item in
-                        if case .completed = item.status { return true }
-                        if case .cancelled = item.status { return true }
-                        return false
+                if manager.items.contains(where: { if case .failed = $0.status { return true }; return false }) {
+                    Button("Retry Failed") {
+                        manager.retryFailedDownloads()
                     }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
+
+                    Button("Remove Failed") {
+                        manager.removeFailedDownloads()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+
+                    Text("·")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Button("Clear Completed") {
+                    manager.clearCompleted()
                 }
                 .buttonStyle(.plain)
                 .font(.caption)
@@ -589,10 +707,7 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
 
                 Button("Clear All") {
-                    for item in manager.items where item.status.isActive {
-                        manager.cancelDownload(item)
-                    }
-                    manager.items.removeAll()
+                    manager.clearAllDownloads()
                 }
                 .buttonStyle(.plain)
                 .font(.caption)
@@ -723,12 +838,6 @@ struct ContentView: View {
             return
         }
 
-        // Prevent duplicate active downloads
-        if manager.isDuplicate(url: trimmed) {
-            showDuplicateAlert = true
-            return
-        }
-
         // Auto-detect playlist URLs (contain list= param), or use the toggle
         let isPlaylistURL = trimmed.contains("list=") || trimmed.contains("/playlist?")
         if downloadPlaylist || isPlaylistURL {
@@ -737,10 +846,10 @@ struct ContentView: View {
                 showUpgradePrompt = true
                 return
             }
-            pendingPlaylistURL = trimmed
-            pendingPlaylistItemCount = 0
-            showPlaylistConfirm = true
+            if handleDuplicateIfNeeded(url: trimmed, isPlaylist: true) { return }
+            inspectPlaylist(url: trimmed)
         } else {
+            if handleDuplicateIfNeeded(url: trimmed, isPlaylist: false) { return }
             manager.addDownload(
                 url: trimmed,
                 quality: selectedQuality,
@@ -748,8 +857,8 @@ struct ContentView: View {
                 subtitles: downloadSubtitles,
                 playlistDownload: false
             )
+            urlInput = ""
         }
-        urlInput = ""
     }
 
     private func startPlaylistDownload(url: String) {
@@ -759,6 +868,88 @@ struct ContentView: View {
             format: selectedFormat,
             subtitles: downloadSubtitles
         )
+        urlInput = ""
+    }
+
+    private func inspectPlaylist(url: String) {
+        isInspectingPlaylist = true
+        pendingPlaylistURL = url
+        pendingPlaylistItemCount = 0
+        pendingPlaylistTitle = nil
+        manager.inspectPlaylist(url: url) { result in
+            isInspectingPlaylist = false
+            switch result {
+            case .success(let inspection):
+                pendingPlaylistItemCount = inspection.playlistCount
+                pendingPlaylistTitle = inspection.playlistTitle ?? inspection.title
+                showPlaylistConfirm = true
+            case .failure(let error):
+                playlistInspectErrorMessage = error.errorDescription ?? "Could not inspect that playlist."
+                showPlaylistInspectError = true
+            }
+        }
+    }
+
+    private func handleDuplicateIfNeeded(url: String, isPlaylist: Bool) -> Bool {
+        guard let message = manager.duplicateMessage(for: url) else { return false }
+
+        switch manager.settings.duplicateHandling {
+        case .allow:
+            return false
+        case .skip:
+            duplicateAlertMessage = message + " It was skipped because duplicate handling is set to Skip."
+            duplicateAlertAllowsOverride = false
+            showDuplicateAlert = true
+            return true
+        case .ask:
+            pendingDuplicateURL = url
+            pendingDuplicateIsPlaylist = isPlaylist
+            duplicateAlertMessage = message + " Do you want to add it anyway?"
+            duplicateAlertAllowsOverride = true
+            showDuplicateAlert = true
+            return true
+        }
+    }
+
+    private func forceSubmitDuplicate() {
+        guard let url = pendingDuplicateURL else { return }
+        let isPlaylist = pendingDuplicateIsPlaylist
+        clearPendingDuplicate()
+        if isPlaylist {
+            inspectPlaylist(url: url)
+        } else {
+            manager.addDownload(
+                url: url,
+                quality: selectedQuality,
+                format: selectedFormat,
+                subtitles: downloadSubtitles,
+                playlistDownload: false
+            )
+            urlInput = ""
+        }
+    }
+
+    private func clearPendingDuplicate() {
+        pendingDuplicateURL = nil
+        pendingDuplicateIsPlaylist = false
+        duplicateAlertAllowsOverride = false
+    }
+
+    private func statusRank(_ status: DownloadStatus) -> Int {
+        switch status {
+        case .failed:
+            return 0
+        case .downloading, .processing, .fetchingInfo:
+            return 1
+        case .paused:
+            return 2
+        case .waiting:
+            return 3
+        case .completed:
+            return 4
+        case .cancelled:
+            return 5
+        }
     }
 
     private func isValidDownloadURL(_ string: String) -> Bool {

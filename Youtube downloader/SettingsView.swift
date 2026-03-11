@@ -38,6 +38,21 @@ struct SettingsView: View {
 
             Divider()
 
+            HStack {
+                Picker("Mode", selection: $settings.settingsPresentationMode) {
+                    ForEach(SettingsPresentationMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+                .onChange(of: settings.settingsPresentationMode) { settings.saveSettings() }
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
 
@@ -106,6 +121,21 @@ struct SettingsView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+                        }
+                    }
+
+                    settingsSection(title: "Quick Presets", icon: "slider.horizontal.3") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 8) {
+                                presetButton("Best Quality") { applyBestQualityPreset() }
+                                presetButton("Audio Only") { applyAudioOnlyPreset() }
+                                presetButton("Mac Compatible") { applyMacCompatiblePreset() }
+                                presetButton("Private / Login") { applyPrivateVideoPreset() }
+                            }
+
+                            Text("Presets configure the most common download setups without digging through advanced flags.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -183,6 +213,20 @@ struct SettingsView: View {
                                 }
                             }
 
+                            settingsRow(label: "Duplicates") {
+                                Picker("", selection: $settings.duplicateHandling) {
+                                    ForEach(DuplicateHandlingMode.allCases) { mode in
+                                        Text(mode.rawValue).tag(mode)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(width: 120)
+                                .onChange(of: settings.duplicateHandling) { settings.saveSettings() }
+                                Text("Queue and history matches")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
+
                             settingsRow(label: "Download Subtitles") {
                                 Toggle("", isOn: $settings.downloadSubtitlesByDefault)
                                     .labelsHidden()
@@ -247,6 +291,7 @@ struct SettingsView: View {
                         }
                     }
 
+                    if settings.settingsPresentationMode == .advanced {
                     // yt-dlp Options
                     settingsSection(title: "yt-dlp Options", icon: "terminal.fill") {
                         VStack(alignment: .leading, spacing: 12) {
@@ -396,12 +441,20 @@ struct SettingsView: View {
                                     .frame(width: 150)
                                     .onChange(of: settings.playlistItemsFilter) { settings.saveSettings() }
                             }
+                            if !settings.playlistItemsFilter.isEmpty {
+                                validationText(playlistItemsValidationMessage, isValid: isPlaylistItemsFilterValid)
+                                    .padding(.leading, 164)
+                            }
 
                             settingsRow(label: "Match Filter") {
                                 TextField("e.g. duration>60", text: $settings.matchFilter)
                                     .textFieldStyle(.roundedBorder)
                                     .frame(width: 150)
                                     .onChange(of: settings.matchFilter) { settings.saveSettings() }
+                            }
+                            if !settings.matchFilter.isEmpty {
+                                validationText(matchFilterValidationMessage, isValid: isMatchFilterLikelyValid)
+                                    .padding(.leading, 164)
                             }
 
                             Divider().padding(.vertical, 4)
@@ -473,9 +526,7 @@ struct SettingsView: View {
                                 }
                             }
                             if !settings.formatSortString.isEmpty {
-                                Text("yt-dlp -S flag: prefer AV1, HDR, higher framerate, etc.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                validationText(formatSortValidationMessage, isValid: isFormatSortLikelyValid)
                                     .padding(.leading, 164)
                             }
 
@@ -547,14 +598,14 @@ struct SettingsView: View {
                                 }
                             }
                             if !settings.cookiesFilePath.isEmpty {
-                                Text("Netscape-format cookies file for site authentication")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                validationText(cookiesFileValidationMessage, isValid: cookiesFileLooksValid)
                                     .padding(.leading, 164)
                             }
                         }
                     }
+                    }
 
+                    if settings.settingsPresentationMode == .advanced {
                     // Advanced
                     settingsSection(title: "Advanced", icon: "gearshape.2") {
                         VStack(alignment: .leading, spacing: 12) {
@@ -600,12 +651,11 @@ struct SettingsView: View {
                                         .frame(width: 250)
                                         .onChange(of: settings.postDownloadScript) { settings.saveSettings() }
                                 }
-                                Text("Use {file} as placeholder for the downloaded file path")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                validationText(postDownloadScriptValidationMessage, isValid: postDownloadScriptLooksValid)
                                     .padding(.leading, 164)
                             }
                         }
+                    }
                     }
 
                     // macOS Integration
@@ -636,6 +686,22 @@ struct SettingsView: View {
                                     .foregroundStyle(.secondary)
                             }
 
+                            if settings.clipboardMonitoring {
+                                settingsRow(label: "Clipboard Action") {
+                                    Picker("", selection: $settings.clipboardAction) {
+                                        ForEach(ClipboardMonitorAction.allCases) { action in
+                                            Text(action.rawValue).tag(action)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                    .frame(width: 130)
+                                    .onChange(of: settings.clipboardAction) { settings.saveSettings() }
+                                    Text("Notify or add URLs automatically")
+                                        .font(.callout)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
                             settingsRow(label: "Launch at Login") {
                                 Toggle("", isOn: $settings.launchAtLogin)
                                     .labelsHidden()
@@ -647,6 +713,7 @@ struct SettingsView: View {
                         }
                     }
 
+                    if settings.settingsPresentationMode == .advanced {
                     // Filename & Organization
                     settingsSection(title: "Filename & Organization", icon: "doc.text") {
                         VStack(alignment: .leading, spacing: 12) {
@@ -656,9 +723,7 @@ struct SettingsView: View {
                                     .frame(width: 250)
                                     .onChange(of: settings.filenameTemplate) { settings.saveSettings() }
                             }
-                            Text("yt-dlp template variables: %(title)s, %(channel)s, %(upload_date)s, %(id)s, %(ext)s")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            validationText(filenameTemplateValidationMessage, isValid: filenameTemplateLooksValid)
                                 .padding(.leading, 164)
 
                             settingsRow(label: "Auto-organize") {
@@ -695,6 +760,7 @@ struct SettingsView: View {
                             }
                         }
                     }
+                    }
 
                     // Output Location
                     settingsSection(title: "Output Location", icon: "folder") {
@@ -726,8 +792,26 @@ struct SettingsView: View {
 
                     // yt-dlp Status
                     settingsSection(title: "Backend (yt-dlp)", icon: "terminal") {
-                        HStack(spacing: 10) {
-                            if manager.isYtdlpInstalled {
+                        VStack(alignment: .leading, spacing: 10) {
+                            if !manager.backendHealthIssues.isEmpty {
+                                ForEach(manager.backendHealthIssues) { issue in
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Image(systemName: issue.severity == .error ? "exclamationmark.triangle.fill" : "info.circle.fill")
+                                            .foregroundStyle(issue.severity == .error ? Color.orange : Color.secondary)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(issue.title)
+                                                .font(.callout)
+                                                .fontWeight(.medium)
+                                            Text(issue.message)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+
+                            HStack(spacing: 10) {
+                                if manager.isYtdlpInstalled {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(Color.green)
                                 VStack(alignment: .leading, spacing: 2) {
@@ -792,7 +876,7 @@ struct SettingsView: View {
                                     }
                                     .padding(.top, 4)
                                 }
-                            } else {
+                                } else {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundStyle(Color.orange)
                                 VStack(alignment: .leading, spacing: 4) {
@@ -820,13 +904,15 @@ struct SettingsView: View {
                                         .controlSize(.small)
                                     }
                                 }
+                                }
+                                Spacer()
                             }
-                            Spacer()
                         }
                         .padding(10)
                         .background(Color(NSColor.controlBackgroundColor))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .onAppear {
+                            manager.refreshBackendHealth(checkVersions: true)
                             if manager.ytdlpCurrentVersion.isEmpty && manager.isYtdlpInstalled {
                                 manager.checkYtdlpVersion()
                             }
@@ -854,7 +940,10 @@ struct SettingsView: View {
 
             HStack {
                 Spacer()
-                Button("Done") { dismiss() }
+                Button("Done") {
+                    manager.refreshBackendHealth(checkVersions: false)
+                    dismiss()
+                }
                     .buttonStyle(PrimaryButtonStyle())
                     .keyboardShortcut(.return, modifiers: .command)
             }
@@ -886,6 +975,18 @@ struct SettingsView: View {
         }
     }
 
+    private func validationText(_ text: String, isValid: Bool) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(isValid ? Color.secondary : Color.orange)
+    }
+
+    private func presetButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(title, action: action)
+            .buttonStyle(SecondaryButtonStyle())
+            .controlSize(.small)
+    }
+
     private func activateKey() {
         Task {
             let result = await license.activateLicense(key: licenseKeyInput)
@@ -907,6 +1008,120 @@ struct SettingsView: View {
         return prefix + suffix
     }
 
+    private var isPlaylistItemsFilterValid: Bool {
+        let trimmed = settings.playlistItemsFilter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return true }
+        return trimmed.range(of: #"^\d+([,-]\d+)*$|^\d+-\d+(,\d+(-\d+)?)*$"#, options: .regularExpression) != nil
+    }
+
+    private var playlistItemsValidationMessage: String {
+        isPlaylistItemsFilterValid
+            ? "Looks good. Example formats: 1-5,8,10"
+            : "Use comma-separated numbers or ranges like 1-5,8,10."
+    }
+
+    private var isMatchFilterLikelyValid: Bool {
+        let trimmed = settings.matchFilter.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return true }
+        let operators = [">=", "<=", "!=", "=", ">", "<", "&", "|"]
+        return operators.contains { trimmed.contains($0) }
+    }
+
+    private var matchFilterValidationMessage: String {
+        isMatchFilterLikelyValid
+            ? "yt-dlp expression looks usable. Example: duration > 60"
+            : "Add a comparison like duration > 60 or !is_live."
+    }
+
+    private var isFormatSortLikelyValid: Bool {
+        let trimmed = settings.formatSortString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return true }
+        return trimmed.contains(",") || trimmed.contains(":") || trimmed.count >= 3
+    }
+
+    private var formatSortValidationMessage: String {
+        if isFormatSortLikelyValid {
+            return "yt-dlp -S syntax. Example: res,ext:mp4:m4a"
+        }
+        return "Add sort tokens like res, fps, codec, or ext:mp4:m4a."
+    }
+
+    private var cookiesFileLooksValid: Bool {
+        settings.cookiesFilePath.isEmpty || FileManager.default.fileExists(atPath: settings.cookiesFilePath)
+    }
+
+    private var cookiesFileValidationMessage: String {
+        if settings.cookiesFilePath.isEmpty {
+            return "Netscape-format cookies file for site authentication."
+        }
+        return cookiesFileLooksValid
+            ? "Cookies file found."
+            : "The selected cookies file could not be found."
+    }
+
+    private var postDownloadScriptLooksValid: Bool {
+        let trimmed = settings.postDownloadScript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return trimmed.contains("{file}") || trimmed.hasPrefix("/") || trimmed.hasPrefix("open ")
+    }
+
+    private var postDownloadScriptValidationMessage: String {
+        if postDownloadScriptLooksValid {
+            return "Use {file}, {title}, or {url}. The command also receives DOWNLOAD_FILE, DOWNLOAD_TITLE, and DOWNLOAD_URL."
+        }
+        return "Add a shell command or absolute path. Include {file} to target the downloaded file."
+    }
+
+    private var filenameTemplateLooksValid: Bool {
+        let trimmed = settings.filenameTemplate.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        return trimmed.contains("%(title)") || trimmed.contains("%(id)")
+    }
+
+    private var filenameTemplateValidationMessage: String {
+        filenameTemplateLooksValid
+            ? "yt-dlp template variables: %(title)s, %(channel)s, %(upload_date)s, %(id)s, %(ext)s"
+            : "Include %(title)s or %(id)s so downloaded files keep a useful name."
+    }
+
+    private func applyBestQualityPreset() {
+        settings.defaultQuality = license.hasFullAccess ? .best : .best1080
+        settings.defaultFormat = .mp4
+        settings.macCompatibleEncoding = false
+        settings.downloadSubtitlesByDefault = false
+        settings.saveSettings()
+        manager.refreshBackendHealth(checkVersions: false)
+    }
+
+    private func applyAudioOnlyPreset() {
+        settings.defaultQuality = .bestAudio
+        settings.defaultFormat = .mp3
+        settings.macCompatibleEncoding = false
+        settings.downloadSubtitlesByDefault = false
+        settings.saveSettings()
+        manager.refreshBackendHealth(checkVersions: false)
+    }
+
+    private func applyMacCompatiblePreset() {
+        settings.defaultQuality = .best1080
+        settings.defaultFormat = .mp4
+        settings.macCompatibleEncoding = true
+        settings.selectedVideoCodec = .h264
+        settings.selectedAudioCodec = .aac
+        settings.saveSettings()
+        manager.refreshBackendHealth(checkVersions: false)
+    }
+
+    private func applyPrivateVideoPreset() {
+        if settings.cookiesFromBrowser == "none" {
+            settings.cookiesFromBrowser = "safari"
+        }
+        settings.embedMetadata = true
+        settings.duplicateHandling = .ask
+        settings.saveSettings()
+        manager.refreshBackendHealth(checkVersions: false)
+    }
+
     private func chooseOutputDirectory() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
@@ -917,6 +1132,7 @@ struct SettingsView: View {
         if panel.runModal() == .OK, let url = panel.url {
             settings.outputDirectory = url
             settings.saveSettings()
+            manager.refreshBackendHealth(checkVersions: false)
         }
     }
 }

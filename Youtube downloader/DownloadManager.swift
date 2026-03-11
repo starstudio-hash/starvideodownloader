@@ -43,10 +43,16 @@ class DownloadManager {
     var isInstallingYtdlp: Bool = false
     var isInstallingFfmpeg: Bool = false
     var installProgress: String = ""
+    var backendHealthIssues: [BackendHealthIssue] = []
+    var lastHealthCheck: Date? = nil
+
+    private var queueSaveWork: DispatchWorkItem?
+    private static let queueSaveQueue = DispatchQueue(label: "com.starvideodownloader.queue-save", qos: .utility)
 
     init(settings: SettingsManager, licenseManager: LicenseManager? = nil) {
         self.settings = settings
         self.licenseManager = licenseManager
+        restorePersistedQueue()
     }
 
     // MARK: - App bin directory
@@ -63,6 +69,10 @@ class DownloadManager {
 
     private static let appFfmpegPath: String = {
         appBinDirectory.appendingPathComponent("ffmpeg").path
+    }()
+
+    private static let queueStateFileURL: URL = {
+        appSupportDirectory().appendingPathComponent("queue-state.json")
     }()
 
     // MARK: - yt-dlp path
@@ -89,6 +99,132 @@ class DownloadManager {
         _cachedYtdlpPath = nil
         conversionManager.invalidateFfmpegPathCache()
         repairManager.invalidatePathCache()
+    }
+
+    func performStartupChecks() {
+        InternalRegressionChecks.run()
+        invalidatePathCache()
+        refreshBackendHealth(checkVersions: true)
+        setupScheduler()
+        updateDockBadge()
+        if !waitingItems.isEmpty {
+            startNextWaiting()
+        }
+    }
+
+    func refreshBackendHealth(checkVersions: Bool = false) {
+        var issues: [BackendHealthIssue] = []
+
+        if !isYtdlpInstalled {
+            issues.append(
+                BackendHealthIssue(
+                    severity: .error,
+                    title: "yt-dlp missing",
+                    message: "Downloads will not start until yt-dlp is installed."
+                )
+            )
+        } else if checkVersions && ytdlpCurrentVersion.isEmpty && !ytdlpVersionChecking {
+            checkYtdlpVersion()
+        }
+
+        if !conversionManager.isFfmpegInstalled {
+            issues.append(
+                BackendHealthIssue(
+                    severity: .warning,
+                    title: "ffmpeg missing",
+                    message: "Conversion, repair, and Mac-compatible remuxing are unavailable until ffmpeg is installed."
+                )
+            )
+        }
+
+        var isDirectory: ObjCBool = false
+        let outputPath = settings.outputDirectory.path
+        if !FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory) || !isDirectory.boolValue {
+            issues.append(
+                BackendHealthIssue(
+                    severity: .error,
+                    title: "Output folder missing",
+                    message: "Choose a valid output folder before starting downloads."
+                )
+            )
+        } else if !FileManager.default.isWritableFile(atPath: outputPath) {
+            issues.append(
+                BackendHealthIssue(
+                    severity: .error,
+                    title: "Output folder not writable",
+                    message: "The current output folder does not allow writes."
+                )
+            )
+        }
+
+        if !settings.cookiesFilePath.isEmpty && !FileManager.default.fileExists(atPath: settings.cookiesFilePath) {
+            issues.append(
+                BackendHealthIssue(
+                    severity: .warning,
+                    title: "Cookies file missing",
+                    message: "The configured cookies.txt file could not be found."
+                )
+            )
+        }
+
+        if settings.postDownloadAction == "script", !settings.postDownloadScript.isEmpty {
+            let firstToken = settings.postDownloadScript.split(separator: " ").first.map(String.init) ?? ""
+            if !firstToken.isEmpty, firstToken.hasPrefix("/"), !FileManager.default.fileExists(atPath: firstToken) {
+                issues.append(
+                    BackendHealthIssue(
+                        severity: .warning,
+                        title: "Script path missing",
+                        message: "The post-download script path does not exist."
+                    )
+                )
+            }
+        }
+
+        backendHealthIssues = issues
+        lastHealthCheck = Date()
+    }
+
+    var backendHealthSummary: String? {
+        backendHealthIssues.first?.message
+    }
+
+    var hasBackendErrors: Bool {
+        backendHealthIssues.contains { $0.severity == .error }
+    }
+
+    private func scheduleQueuePersistence() {
+        queueSaveWork?.cancel()
+        let snapshot = PersistedDownloadQueue(savedAt: Date(), items: items.map(PersistedDownloadItem.init(item:)))
+        let work = DispatchWorkItem {
+            Self.queueSaveQueue.async {
+                if snapshot.items.isEmpty {
+                    try? FileManager.default.removeItem(at: Self.queueStateFileURL)
+                    return
+                }
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                if let data = try? encoder.encode(snapshot) {
+                    try? data.write(to: Self.queueStateFileURL, options: .atomic)
+                }
+            }
+        }
+        queueSaveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75, execute: work)
+    }
+
+    private func restorePersistedQueue() {
+        guard let data = try? Data(contentsOf: Self.queueStateFileURL) else { return }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let snapshot = try? decoder.decode(PersistedDownloadQueue.self, from: data) else { return }
+
+        let restoredItems = snapshot.items.map { $0.makeDownloadItem() }
+        items = restoredItems
+        waitingItems = restoredItems.filter {
+            if case .waiting = $0.status { return true }
+            return false
+        }
     }
 
     // MARK: - One-click install
@@ -157,11 +293,13 @@ class DownloadManager {
                     self.isInstallingYtdlp = false
                     self.installProgress = ""
                     self.checkYtdlpVersion()
+                    self.refreshBackendHealth(checkVersions: false)
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.isInstallingYtdlp = false
                     self.installProgress = "Failed: \(error.localizedDescription)"
+                    self.refreshBackendHealth(checkVersions: false)
                 }
             }
         }
@@ -299,11 +437,13 @@ class DownloadManager {
                     self.invalidatePathCache()
                     self.isInstallingFfmpeg = false
                     self.installProgress = ""
+                    self.refreshBackendHealth(checkVersions: false)
                 }
             } catch {
                 DispatchQueue.main.async {
                     self.isInstallingFfmpeg = false
                     self.installProgress = "Failed: \(error.localizedDescription)"
+                    self.refreshBackendHealth(checkVersions: false)
                 }
             }
         }
@@ -397,7 +537,26 @@ class DownloadManager {
     /// Returns true if a download for this URL is already queued or in progress.
     func isDuplicate(url: String) -> Bool {
         items.contains { item in
-            item.url == url && item.status.isActive
+            item.url == url && !matchesTerminalState(item.status)
+        }
+    }
+
+    func duplicateMessage(for url: String) -> String? {
+        if items.contains(where: { $0.url == url && !matchesTerminalState($0.status) }) {
+            return "This URL is already in your queue."
+        }
+        if historyManager.entries.contains(where: { $0.url == url }) {
+            return "This URL already exists in your download history."
+        }
+        return nil
+    }
+
+    private func matchesTerminalState(_ status: DownloadStatus) -> Bool {
+        switch status {
+        case .completed, .failed, .cancelled:
+            return true
+        default:
+            return false
         }
     }
 
@@ -405,7 +564,8 @@ class DownloadManager {
 
     @discardableResult
     func addDownload(url: String, quality: VideoQuality? = nil, format: OutputFormat? = nil,
-                     subtitles: Bool? = nil, playlistDownload: Bool = false) -> Bool {
+                     subtitles: Bool? = nil, playlistDownload: Bool = false,
+                     scheduledStartDate: Date? = nil) -> Bool {
         // Enforce license: check daily download limit for free users
         if let lm = licenseManager, !lm.hasFullAccess, !lm.canDownload {
             return false
@@ -424,10 +584,14 @@ class DownloadManager {
             quality: effectiveQuality,
             format: format ?? settings.defaultFormat,
             subtitles: subtitles ?? settings.downloadSubtitlesByDefault,
-            playlistDownload: playlistDownload
+            playlistDownload: playlistDownload,
+            scheduledStartDate: scheduledStartDate
         )
         items.append(item)
+        prefetchMetadataIfNeeded(for: item)
         enqueueOrStart(item)
+        scheduleQueuePersistence()
+        setupScheduler()
         if let lm = licenseManager, !lm.hasFullAccess {
             lm.recordDownload()
         }
@@ -445,100 +609,82 @@ class DownloadManager {
         let q = quality ?? settings.defaultQuality
         let fmt = format ?? settings.defaultFormat
         let subs = subtitles ?? settings.downloadSubtitlesByDefault
-        let ytdlp = ytdlpPath
-        let cleanEnv = buildCleanEnvironment()
-
         // Add a placeholder item to show something immediately
         let placeholder = DownloadItem(url: url, quality: q, format: fmt, subtitles: subs)
         placeholder.title = "Fetching playlist…"
         placeholder.status = .fetchingInfo
         items.append(placeholder)
+        scheduleQueuePersistence()
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
-
-            // Use --flat-playlist --dump-json to get all video entries without downloading
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: ytdlp)
-            process.arguments = ["--flat-playlist", "--dump-json", "--no-warnings", url]
-            process.environment = cleanEnv
-
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = Pipe()
-
-            do { try process.run() } catch {
-                DispatchQueue.main.async {
-                    // Replace placeholder with a visible error item
-                    placeholder.title = "Playlist fetch failed"
-                    placeholder.status = .failed("Could not fetch playlist. Check the URL and try again.")
-                }
-                return
-            }
-            process.waitUntilExit()
-
-            guard process.terminationStatus == 0 else {
-                DispatchQueue.main.async {
-                    placeholder.title = "Playlist fetch failed"
-                    placeholder.status = .failed("yt-dlp exited with error. Check the URL and try again.")
-                }
-                return
-            }
-
-            let raw = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            // Each line is a JSON object for one video
-            let entries = raw.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-
-            var playlistName: String = "Playlist"
-            var videoURLs: [(url: String, title: String, index: Int)] = []
-
-            for line in entries {
-                guard let data = line.data(using: .utf8),
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-                else { continue }
-
-                // Playlist-level entry has "playlist_title"
-                if let pt = json["playlist_title"] as? String, !pt.isEmpty {
-                    playlistName = pt
-                }
-
-                let videoID = json["id"] as? String ?? ""
-                let title = json["title"] as? String ?? videoID
-                let idx = json["playlist_index"] as? Int ?? (videoURLs.count + 1)
-                let entryURL = "https://www.youtube.com/watch?v=\(videoID)"
-
-                if !videoID.isEmpty {
-                    videoURLs.append((url: entryURL, title: title, index: idx))
-                }
-            }
+            let result = self.fetchPlaylistEntries(url: url)
 
             DispatchQueue.main.async {
                 // Remove the placeholder
                 self.items.removeAll { $0.id == placeholder.id }
 
-                guard !videoURLs.isEmpty else {
+                guard let result else {
+                    placeholder.title = "Playlist fetch failed"
+                    placeholder.status = .failed("Could not fetch playlist. Check the URL and try again.")
+                    self.items.append(placeholder)
+                    self.scheduleQueuePersistence()
+                    return
+                }
+
+                guard !result.entries.isEmpty else {
                     // Put placeholder back with error message so user sees something
                     placeholder.title = "No videos found in playlist"
                     placeholder.status = .failed("The playlist appears to be empty or private.")
                     self.items.append(placeholder)
+                    self.scheduleQueuePersistence()
                     return
                 }
 
                 // Enqueue each video as its own DownloadItem
-                for entry in videoURLs {
+                for entry in result.entries {
                     let item = DownloadItem(
                         url: entry.url,
                         quality: q,
                         format: fmt,
                         subtitles: subs,
                         playlistDownload: false,
-                        playlistTitle: playlistName,
+                        playlistTitle: result.title,
                         playlistIndex: entry.index
                     )
                     item.title = entry.title
                     self.items.append(item)
+                    self.prefetchMetadataIfNeeded(for: item)
                     self.enqueueOrStart(item)
                 }
+                self.scheduleQueuePersistence()
+                self.setupScheduler()
+            }
+        }
+    }
+
+    func inspectPlaylist(url: String, completion: @escaping (Result<URLInspectionResult, URLInspectionError>) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            guard let result = self.fetchPlaylistEntries(url: url) else {
+                DispatchQueue.main.async {
+                    completion(.failure(.message("Could not inspect that playlist.")))
+                }
+                return
+            }
+
+            let inspection = URLInspectionResult(
+                title: result.title,
+                channel: nil,
+                durationText: nil,
+                thumbnailURL: nil,
+                isLiveStream: false,
+                isPlaylist: true,
+                playlistTitle: result.title,
+                playlistCount: result.entries.count
+            )
+            DispatchQueue.main.async {
+                completion(.success(inspection))
             }
         }
     }
@@ -560,6 +706,8 @@ class DownloadManager {
             activeDownloadCount -= 1
         }
         startNextWaiting()
+        scheduleQueuePersistence()
+        setupScheduler()
     }
 
     func pauseDownload(_ item: DownloadItem) {
@@ -567,6 +715,7 @@ class DownloadManager {
         process.suspend()
         if case .downloading(let progress, _, _) = item.status {
             item.status = .paused(progress: progress)
+            scheduleQueuePersistence()
         }
     }
 
@@ -575,6 +724,7 @@ class DownloadManager {
         process.resume()
         if case .paused(let progress) = item.status {
             item.status = .downloading(progress: progress, speed: "—", eta: "—")
+            scheduleQueuePersistence()
         }
     }
 
@@ -668,6 +818,8 @@ class DownloadManager {
     func removeItem(_ item: DownloadItem) {
         cancelDownload(item)
         items.removeAll { $0.id == item.id }
+        scheduleQueuePersistence()
+        setupScheduler()
     }
 
     func moveItem(from sourceID: UUID, to targetID: UUID) {
@@ -677,16 +829,61 @@ class DownloadManager {
         else { return }
         let item = items.remove(at: sourceIndex)
         items.insert(item, at: targetIndex)
+        rebuildWaitingQueue()
+        scheduleQueuePersistence()
     }
 
     func retryDownload(_ item: DownloadItem) {
         item.status = .waiting
-        item.title = item.url
+        if item.title.isEmpty || item.title == item.url {
+            item.title = item.url
+        }
         item.channelName = ""
         item.duration = ""
         item.thumbnail = nil
         item.outputPath = nil
+        item.integrityWarning = nil
+        prefetchMetadataIfNeeded(for: item)
         enqueueOrStart(item)
+        scheduleQueuePersistence()
+        setupScheduler()
+    }
+
+    func retryFailedDownloads() {
+        for item in items {
+            if case .failed = item.status {
+                retryDownload(item)
+            }
+        }
+    }
+
+    func removeFailedDownloads() {
+        items.removeAll {
+            if case .failed = $0.status { return true }
+            return false
+        }
+        rebuildWaitingQueue()
+        scheduleQueuePersistence()
+    }
+
+    func clearCompleted() {
+        items.removeAll {
+            if case .completed = $0.status { return true }
+            if case .cancelled = $0.status { return true }
+            return false
+        }
+        rebuildWaitingQueue()
+        scheduleQueuePersistence()
+    }
+
+    func clearAllDownloads() {
+        for item in items where item.status.isActive {
+            cancelDownload(item)
+        }
+        items.removeAll()
+        waitingItems.removeAll()
+        scheduleQueuePersistence()
+        setupScheduler()
     }
 
     func openInFinder(_ item: DownloadItem) {
@@ -694,6 +891,166 @@ class DownloadManager {
             NSWorkspace.shared.activateFileViewerSelecting([path])
         } else {
             NSWorkspace.shared.open(settings.outputDirectory)
+        }
+    }
+
+    func updateScheduledStart(for item: DownloadItem, date: Date?) {
+        item.scheduledStartDate = date
+        if case .failed(let message) = item.status, message.contains("Interrupted by a previous app session") {
+            item.status = .waiting
+        }
+        if case .waiting = item.status {
+            waitingItems.removeAll { $0.id == item.id }
+            waitingItems.append(item)
+        }
+        scheduleQueuePersistence()
+        setupScheduler()
+        startNextWaiting()
+    }
+
+    func failureRecoverySuggestion(for item: DownloadItem) -> String? {
+        guard case .failed(let message) = item.status else { return nil }
+        let lower = message.lowercased()
+
+        if lower.contains("private") || lower.contains("login") || lower.contains("sign in") {
+            return "Try browser cookies or a cookies.txt file in Settings."
+        }
+        if lower.contains("rate") || lower.contains("too many requests") || lower.contains("http error 429") {
+            return "Reduce speed, enable sleep intervals, or try again later."
+        }
+        if lower.contains("ffmpeg") {
+            return "Install ffmpeg from the app before retrying."
+        }
+        if lower.contains("yt-dlp not found") {
+            return "Install yt-dlp from the Downloads tab or Settings."
+        }
+        if lower.contains("geo") || lower.contains("region") {
+            return "Try Geo Bypass in Advanced Settings."
+        }
+        if lower.contains("interrupted by a previous app session") {
+            return "Retry will usually resume from the partial file if it still exists."
+        }
+        return "Retry with different quality, format, or authentication settings."
+    }
+
+    private struct PlaylistFetchResult {
+        var title: String
+        var entries: [(url: String, title: String, index: Int)]
+    }
+
+    private func fetchPlaylistEntries(url: String) -> PlaylistFetchResult? {
+        guard isYtdlpInstalled else { return nil }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: ytdlpPath)
+        process.arguments = ["--flat-playlist", "--dump-single-json", "--no-warnings", url]
+        process.environment = buildCleanEnvironment()
+
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+
+        do {
+            try process.run()
+        } catch {
+            return nil
+        }
+        process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            return nil
+        }
+
+        let data = stdout.fileHandleForReading.readDataToEndOfFile()
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+
+        let playlistTitle = (json["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let entries = json["entries"] as? [[String: Any]] ?? []
+        let normalizedEntries = entries.enumerated().compactMap { offset, entry -> (String, String, Int)? in
+            let title = (entry["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let index = entry["playlist_index"] as? Int ?? (offset + 1)
+
+            if let webpageURL = entry["url"] as? String, webpageURL.starts(with: "http") {
+                return (webpageURL, title ?? webpageURL, index)
+            }
+
+            let videoID = entry["id"] as? String ?? ""
+            guard !videoID.isEmpty else { return nil }
+            let extractor = (entry["extractor_key"] as? String ?? "").lowercased()
+            let resolvedURL: String
+            switch extractor {
+            case "vimeo":
+                resolvedURL = "https://vimeo.com/\(videoID)"
+            case "tiktok":
+                resolvedURL = "https://www.tiktok.com/@video/\(videoID)"
+            default:
+                resolvedURL = "https://www.youtube.com/watch?v=\(videoID)"
+            }
+            return (resolvedURL, title ?? videoID, index)
+        }
+
+        return PlaylistFetchResult(title: playlistTitle?.isEmpty == false ? playlistTitle! : "Playlist", entries: normalizedEntries)
+    }
+
+    private func prefetchMetadataIfNeeded(for item: DownloadItem) {
+        guard isYtdlpInstalled else { return }
+        guard item.playlistTitle == nil else { return }
+
+        let ytdlp = ytdlpPath
+        let env = buildCleanEnvironment()
+        let url = item.url
+
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: ytdlp)
+            process.arguments = ["--dump-single-json", "--skip-download", "--no-playlist", "--no-warnings", url]
+            process.environment = env
+
+            let stdout = Pipe()
+            process.standardOutput = stdout
+            process.standardError = Pipe()
+
+            do {
+                try process.run()
+            } catch {
+                return
+            }
+            process.waitUntilExit()
+
+            guard process.terminationStatus == 0 else { return }
+            let data = stdout.fileHandleForReading.readDataToEndOfFile()
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+
+            let title = (json["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let channel = (json["channel"] as? String ?? json["uploader"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let duration = (json["duration"] as? Int).map(self.formatDuration)
+            let thumbnail = (json["thumbnail"] as? String).flatMap(URL.init(string:))
+            let isLive = (json["is_live"] as? Bool) ?? false
+
+            DispatchQueue.main.async {
+                guard self.items.contains(where: { $0.id == item.id }) else { return }
+                if item.title == item.url, let title, !title.isEmpty {
+                    item.title = title
+                }
+                if item.channelName.isEmpty, !channel.isEmpty {
+                    item.channelName = channel
+                }
+                if item.duration.isEmpty, let duration {
+                    item.duration = duration
+                }
+                if item.thumbnail == nil {
+                    item.thumbnail = thumbnail
+                }
+                if isLive {
+                    item.isLiveStream = true
+                }
+                self.scheduleQueuePersistence()
+            }
         }
     }
 
@@ -711,23 +1068,65 @@ class DownloadManager {
     }
 
     private func enqueueOrStart(_ item: DownloadItem) {
+        if !itemCanStartNow(item) {
+            item.status = .waiting
+            waitingItems.removeAll { $0.id == item.id }
+            waitingItems.append(item)
+            scheduleQueuePersistence()
+            setupScheduler()
+            return
+        }
         if activeDownloadCount < effectiveMaxConcurrent {
             activeDownloadCount += 1
             startDownloadInBackground(item)
         } else {
             item.status = .waiting
+            waitingItems.removeAll { $0.id == item.id }
             waitingItems.append(item)
         }
+        scheduleQueuePersistence()
+        setupScheduler()
     }
 
     private func startNextWaiting() {
-        while !waitingItems.isEmpty, activeDownloadCount < effectiveMaxConcurrent {
-            let next = waitingItems.removeFirst()
+        rebuildWaitingQueue()
+        while activeDownloadCount < effectiveMaxConcurrent {
+            guard let nextIndex = waitingItems.firstIndex(where: { itemCanStartNow($0) }) else { break }
+            let next = waitingItems.remove(at: nextIndex)
             // Only start if the item is still in our list (not removed)
             guard items.contains(where: { $0.id == next.id }) else { continue }
             activeDownloadCount += 1
             startDownloadInBackground(next)
         }
+        scheduleQueuePersistence()
+    }
+
+    private func rebuildWaitingQueue() {
+        let waitingIDs = Set(
+            items.compactMap { item in
+                if case .waiting = item.status { return item.id }
+                return nil
+            }
+        )
+        waitingItems = items.filter { waitingIDs.contains($0.id) }
+    }
+
+    private func itemCanStartNow(_ item: DownloadItem, now: Date = Date()) -> Bool {
+        if let scheduledStart = item.scheduledStartDate, scheduledStart > now {
+            return false
+        }
+
+        guard settings.scheduledDownloadEnabled else { return true }
+        let calendar = Calendar.current
+        guard let scheduledToday = calendar.date(
+            bySettingHour: calendar.component(.hour, from: settings.scheduledDownloadTime),
+            minute: calendar.component(.minute, from: settings.scheduledDownloadTime),
+            second: 0,
+            of: now
+        ) else {
+            return true
+        }
+        return now >= scheduledToday
     }
 
     // MARK: - Background Download (no async/await — plain GCD to avoid actor issues)
@@ -737,10 +1136,14 @@ class DownloadManager {
             item.status = .failed("yt-dlp not found. Install it from the Downloads tab.")
             if activeDownloadCount > 0 { activeDownloadCount -= 1 }
             startNextWaiting()
+            refreshBackendHealth()
+            scheduleQueuePersistence()
             return
         }
 
         item.status = .downloading(progress: 0, speed: "—", eta: "—")
+        scheduleQueuePersistence()
+        updateDockBadge()
 
         // Snapshot all item properties we need before leaving main thread
         let url = item.url
@@ -1070,6 +1473,7 @@ class DownloadManager {
                                 }
                             }
                         }
+                        self?.scheduleQueuePersistence()
                     }
                 }
             }
@@ -1087,7 +1491,11 @@ class DownloadManager {
         }
 
         do { try process.run() } catch {
-            DispatchQueue.main.async { item.status = .failed("Could not start yt-dlp: \(error.localizedDescription)") }
+            DispatchQueue.main.async {
+                item.status = .failed("Could not start yt-dlp: \(error.localizedDescription)")
+                self.scheduleQueuePersistence()
+                self.refreshBackendHealth()
+            }
             return
         }
 
@@ -1107,6 +1515,7 @@ class DownloadManager {
                 if let lastTitle, item.title == item.url { item.title = lastTitle }
                 if let lastChannel { item.channelName = lastChannel }
             }
+            self.scheduleQueuePersistence()
         }
 
         guard process.terminationStatus == 0 else {
@@ -1116,6 +1525,7 @@ class DownloadManager {
                 item.status = .failed(errMsg)
                 self.postNotification(title: "Download Failed", body: item.title)
                 self.updateDockBadge()
+                self.scheduleQueuePersistence()
             }
             return
         }
@@ -1210,12 +1620,19 @@ class DownloadManager {
                         self.runPostDownloadAction(for: item)
                         self.generateThumbnail(for: item)
                         self.verifyFileIntegrity(for: item)
+                        self.scheduleQueuePersistence()
                     }
                 } else {
-                    DispatchQueue.main.async { item.status = .failed("Video conversion failed. The video was downloaded but could not be converted.") }
+                    DispatchQueue.main.async {
+                        item.status = .failed("Video conversion failed. The video was downloaded but could not be converted.")
+                        self.scheduleQueuePersistence()
+                    }
                 }
             } else {
-                DispatchQueue.main.async { item.status = .failed("Download completed but output file could not be located.") }
+                DispatchQueue.main.async {
+                    item.status = .failed("Download completed but output file could not be located.")
+                    self.scheduleQueuePersistence()
+                }
             }
         } else {
             // Non-macCompatible or audio job — just mark completed
@@ -1236,6 +1653,7 @@ class DownloadManager {
                 self.runPostDownloadAction(for: item)
                 self.generateThumbnail(for: item)
                 self.verifyFileIntegrity(for: item)
+                self.scheduleQueuePersistence()
             }
         }
     }
@@ -1253,7 +1671,10 @@ class DownloadManager {
         item: DownloadItem
     ) -> Bool {
         // Reset progress display for retry attempts
-        DispatchQueue.main.async { item.status = .processing(progress: 0) }
+        DispatchQueue.main.async {
+            item.status = .processing(progress: 0)
+            self.scheduleQueuePersistence()
+        }
 
         let ffmpeg = Process()
         ffmpeg.executableURL = URL(fileURLWithPath: ffmpegPath)
@@ -1298,18 +1719,27 @@ class DownloadManager {
                 let now = DispatchTime.now()
                 if now > lastProgressUpdate + .milliseconds(100) {
                     lastProgressUpdate = now
-                    DispatchQueue.main.async { item.status = .processing(progress: pct) }
+                    DispatchQueue.main.async {
+                        item.status = .processing(progress: pct)
+                        self?.scheduleQueuePersistence()
+                    }
                 }
             }
         }
 
         guard (try? ffmpeg.run()) != nil else {
-            DispatchQueue.main.async { self.processes.removeValue(forKey: item.id) }
+            DispatchQueue.main.async {
+                self.processes.removeValue(forKey: item.id)
+                self.scheduleQueuePersistence()
+            }
             return false
         }
         ffmpeg.waitUntilExit()
         outPipe.fileHandleForReading.readabilityHandler = nil
-        DispatchQueue.main.async { self.processes.removeValue(forKey: item.id) }
+        DispatchQueue.main.async {
+            self.processes.removeValue(forKey: item.id)
+            self.scheduleQueuePersistence()
+        }
         return ffmpeg.terminationStatus == 0
     }
 
@@ -1361,6 +1791,7 @@ class DownloadManager {
             if process.terminationStatus != 0 || !errOutput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 DispatchQueue.main.async {
                     item.integrityWarning = errOutput.isEmpty ? "File may be corrupted" : errOutput.prefix(200).description
+                    self.scheduleQueuePersistence()
                 }
             }
         }
@@ -1402,6 +1833,7 @@ class DownloadManager {
             if process.terminationStatus == 0 && FileManager.default.fileExists(atPath: thumbPath.path) {
                 DispatchQueue.main.async {
                     item.localThumbnail = thumbPath
+                    self.scheduleQueuePersistence()
                 }
             }
         }
@@ -1635,7 +2067,30 @@ class DownloadManager {
         ]
         let isVideoURL = videoHosts.contains { host.contains($0) }
 
-        if isVideoURL && !isDuplicate(url: trimmed) {
+        guard isVideoURL else { return }
+        guard !isDuplicate(url: trimmed) else { return }
+
+        if settings.clipboardAction == .addToQueue {
+            guard isYtdlpInstalled else {
+                postNotification(
+                    title: "Clipboard URL Detected",
+                    body: "Install yt-dlp before auto-adding copied video URLs."
+                )
+                return
+            }
+            let added = addDownload(url: trimmed)
+            if added {
+                postNotification(
+                    title: "Added from Clipboard",
+                    body: "A copied video URL was added to your queue."
+                )
+            } else {
+                postNotification(
+                    title: "Clipboard URL Skipped",
+                    body: "The copied video URL could not be added right now."
+                )
+            }
+        } else {
             postNotification(
                 title: "Video URL Detected",
                 body: "A video URL was copied. Open the app to download it."
@@ -1649,23 +2104,20 @@ class DownloadManager {
 
     func setupScheduler() {
         scheduleTimer?.invalidate()
-        guard settings.scheduledDownloadEnabled else { return }
+        let hasFutureScheduledItems = items.contains {
+            if let scheduledStartDate = $0.scheduledStartDate {
+                return scheduledStartDate > Date()
+            }
+            return false
+        }
+        guard settings.scheduledDownloadEnabled || hasFutureScheduledItems else { return }
         scheduleTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.checkSchedule()
         }
     }
 
     private func checkSchedule() {
-        let now = Date()
-        let calendar = Calendar.current
-        let nowH = calendar.component(.hour, from: now)
-        let nowM = calendar.component(.minute, from: now)
-        let schedH = calendar.component(.hour, from: settings.scheduledDownloadTime)
-        let schedM = calendar.component(.minute, from: settings.scheduledDownloadTime)
-        if nowH == schedH && nowM == schedM {
-            // Start all waiting downloads
-            startNextWaiting()
-        }
+        startNextWaiting()
     }
 
     // MARK: - Post-download Actions
@@ -1686,10 +2138,15 @@ class DownloadManager {
                     let process = Process()
                     process.executableURL = URL(fileURLWithPath: "/bin/sh")
                     // Use shell variable to safely pass the file path, avoiding command injection
-                    let safeCommand = script.replacingOccurrences(of: "{file}", with: "\"$DOWNLOAD_FILE\"")
+                    let safeCommand = script
+                        .replacingOccurrences(of: "{file}", with: "\"$DOWNLOAD_FILE\"")
+                        .replacingOccurrences(of: "{title}", with: "\"$DOWNLOAD_TITLE\"")
+                        .replacingOccurrences(of: "{url}", with: "\"$DOWNLOAD_URL\"")
                     process.arguments = ["-c", safeCommand]
                     var env = ProcessInfo.processInfo.environment
                     env["DOWNLOAD_FILE"] = path
+                    env["DOWNLOAD_TITLE"] = item.title
+                    env["DOWNLOAD_URL"] = item.url
                     process.environment = env
                     try? process.run()
                     process.waitUntilExit()
@@ -1709,6 +2166,7 @@ class DownloadManager {
             let format: String
             let subtitles: Bool
             let status: String
+            let scheduledStartDate: Date?
         }
         let entries = items.map { item in
             let statusStr: String
@@ -1717,11 +2175,19 @@ class DownloadManager {
             case .completed: statusStr = "completed"
             case .failed: statusStr = "failed"
             case .cancelled: statusStr = "cancelled"
-            default: statusStr = "active"
+                default: statusStr = "active"
             }
-            return QueueEntry(url: item.url, quality: item.quality.rawValue, format: item.format.rawValue, subtitles: item.subtitles, status: statusStr)
+            return QueueEntry(
+                url: item.url,
+                quality: item.quality.rawValue,
+                format: item.format.rawValue,
+                subtitles: item.subtitles,
+                status: statusStr,
+                scheduledStartDate: item.scheduledStartDate
+            )
         }
         let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted]
         return try? encoder.encode(entries)
     }
@@ -1732,13 +2198,22 @@ class DownloadManager {
             let quality: String
             let format: String
             let subtitles: Bool
+            let scheduledStartDate: Date?
         }
-        guard let entries = try? JSONDecoder().decode([QueueEntry].self, from: data) else { return }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        guard let entries = try? decoder.decode([QueueEntry].self, from: data) else { return }
         for entry in entries {
             let q = VideoQuality(rawValue: entry.quality) ?? settings.defaultQuality
             let f = OutputFormat(rawValue: entry.format) ?? settings.defaultFormat
             if !isDuplicate(url: entry.url) {
-                addDownload(url: entry.url, quality: q, format: f, subtitles: entry.subtitles)
+                addDownload(
+                    url: entry.url,
+                    quality: q,
+                    format: f,
+                    subtitles: entry.subtitles,
+                    scheduledStartDate: entry.scheduledStartDate
+                )
             }
         }
     }

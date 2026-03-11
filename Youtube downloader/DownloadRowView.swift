@@ -63,6 +63,12 @@ struct DownloadRowView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    if let scheduledStart = item.scheduledStartDate, scheduledStart > Date() {
+                        Label(scheduledStart.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .lineLimit(1)
+                    }
                     Label(item.quality.rawValue, systemImage: "4k.tv")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -192,10 +198,18 @@ struct DownloadRowView: View {
                     .foregroundStyle(.orange)
             }
         case .failed(let msg):
-            Text(msg)
-                .font(.caption2)
-                .foregroundStyle(Color.red)
-                .lineLimit(2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(msg)
+                    .font(.caption2)
+                    .foregroundStyle(Color.red)
+                    .lineLimit(2)
+                if let guidance = manager.failureRecoverySuggestion(for: item) {
+                    Text(guidance)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
         default:
             EmptyView()
         }
@@ -229,9 +243,16 @@ struct DownloadRowView: View {
                 .font(.caption)
                 .foregroundStyle(Color.secondary)
         case .waiting:
-            Label("Waiting", systemImage: "clock.fill")
-                .font(.caption)
-                .foregroundStyle(Color.secondary)
+            if let scheduledStart = item.scheduledStartDate, scheduledStart > Date() {
+                Label("Scheduled", systemImage: "calendar")
+                    .font(.caption)
+                    .foregroundStyle(Color.orange)
+                    .help("Starts at \(scheduledStart.formatted(date: .abbreviated, time: .shortened))")
+            } else {
+                Label("Waiting", systemImage: "clock.fill")
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+            }
         case .fetchingInfo:
             Label("Fetching", systemImage: "magnifyingglass")
                 .font(.caption)
@@ -425,9 +446,34 @@ struct DownloadRowView: View {
                 set: { item.subtitles = $0 }
             ))
             .toggleStyle(.checkbox)
+
+            Divider()
+
+            Toggle("Schedule Start", isOn: Binding(
+                get: { item.scheduledStartDate != nil },
+                set: { enabled in
+                    manager.updateScheduledStart(
+                        for: item,
+                        date: enabled ? (item.scheduledStartDate ?? Calendar.current.date(byAdding: .hour, value: 1, to: Date())) : nil
+                    )
+                }
+            ))
+            .toggleStyle(.checkbox)
+
+            if item.scheduledStartDate != nil {
+                DatePicker(
+                    "Start At",
+                    selection: Binding(
+                        get: { item.scheduledStartDate ?? Date() },
+                        set: { manager.updateScheduledStart(for: item, date: $0) }
+                    ),
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .datePickerStyle(.compact)
+            }
         }
         .padding(16)
-        .frame(width: 260)
+        .frame(width: 300)
     }
 }
 

@@ -77,4 +77,16 @@ class RepairItem: Identifiable {
         default: return false
         }
     }
+
+    var repairReport: String {
+        let issues = detectedIssues.isEmpty ? "No issues recorded" : detectedIssues.joined(separator: ", ")
+        let output = outputPath?.path ?? "No repaired output yet"
+        return """
+        File: \(fileName)
+        Resolution: \(resolution.isEmpty ? "Unknown" : resolution)
+        Codec: \(codec.isEmpty ? "Unknown" : codec)
+        Issues: \(issues)
+        Output: \(output)
+        """
+    }
 }

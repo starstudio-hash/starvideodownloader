@@ -6,6 +6,15 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum ConversionPreset: String, CaseIterable, Identifiable {
+    case web = "Web MP4"
+    case apple = "Apple"
+    case audio = "Audio"
+    case archive = "Archive"
+
+    var id: String { rawValue }
+}
+
 struct ConversionView: View {
     var manager: DownloadManager
     var conversionManager: ConversionManager
@@ -19,6 +28,7 @@ struct ConversionView: View {
     @State private var showProcessingSheet: Bool = false
     @State private var audioOnlyExtraction: Bool = false
     @State private var showUpgradePrompt: Bool = false
+    @State private var selectedPreset: ConversionPreset = .web
 
     private let outputFormats = ["mp4", "mkv", "mov", "webm", "avi", "ts", "flv", "wmv"]
     private let audioOutputFormats = ["mp3", "m4a", "flac", "wav", "ogg", "aac", "wma"]
@@ -57,6 +67,9 @@ struct ConversionView: View {
         }
         .sheet(isPresented: $showUpgradePrompt) {
             UpgradePromptView(reason: .featureLocked("Video Conversion"))
+        }
+        .onAppear {
+            loadSavedPreset()
         }
     }
 
@@ -128,6 +141,24 @@ struct ConversionView: View {
             Toggle("Audio Only", isOn: $audioOnlyExtraction)
                 .toggleStyle(.checkbox)
                 .font(.callout)
+
+            Divider().frame(height: 16)
+
+            HStack(spacing: 6) {
+                Text("Preset:")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Picker("", selection: $selectedPreset) {
+                    ForEach(ConversionPreset.allCases) { preset in
+                        Text(preset.rawValue).tag(preset)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 120)
+                .onChange(of: selectedPreset) {
+                    applyPreset(selectedPreset)
+                }
+            }
 
             Spacer()
 
@@ -378,6 +409,43 @@ struct ConversionView: View {
             }
         }
         return true
+    }
+
+    private func applyPreset(_ preset: ConversionPreset) {
+        switch preset {
+        case .web:
+            audioOnlyExtraction = false
+            selectedVideoCodec = .h264
+            selectedAudioCodec = .aac
+            selectedQuality = .medium
+            selectedOutputFormat = "mp4"
+        case .apple:
+            audioOnlyExtraction = false
+            selectedVideoCodec = .hevc
+            selectedAudioCodec = .aac
+            selectedQuality = .high
+            selectedOutputFormat = "mov"
+        case .audio:
+            audioOnlyExtraction = true
+            selectedAudioCodec = .aac
+            selectedQuality = .medium
+            selectedOutputFormat = "mp3"
+        case .archive:
+            audioOnlyExtraction = false
+            selectedVideoCodec = .copy
+            selectedAudioCodec = .copy
+            selectedQuality = .high
+            selectedOutputFormat = "mkv"
+        }
+        UserDefaults.standard.set(preset.rawValue, forKey: "conversionPreset")
+    }
+
+    private func loadSavedPreset() {
+        if let raw = UserDefaults.standard.string(forKey: "conversionPreset"),
+           let preset = ConversionPreset(rawValue: raw) {
+            selectedPreset = preset
+            applyPreset(preset)
+        }
     }
 }
 

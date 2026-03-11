@@ -511,6 +511,15 @@ struct RepairRowView: View {
                 }
                 .buttonStyle(.plain).help("Retry")
             }
+            if case .scanned = item.status {
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(item.repairReport, forType: .string)
+                } label: {
+                    Image(systemName: "doc.on.doc").foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain).help("Copy repair report")
+            }
             Button { manager.removeItem(item) } label: {
                 Image(systemName: "trash").foregroundStyle(Color.secondary)
             }

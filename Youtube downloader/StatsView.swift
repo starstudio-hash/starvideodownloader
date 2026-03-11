@@ -14,6 +14,7 @@ struct StatsSnapshot {
     let downloadsByQuality: [(String, Int)]
     let topChannels: [(String, Int)]
     let downloadsByDay: [(String, Int)]
+    let averageSize: String
 
     private static let byteFormatter: ByteCountFormatter = {
         let f = ByteCountFormatter()
@@ -38,6 +39,8 @@ struct StatsSnapshot {
         totalDownloads = entries.count
         totalSize = entries.compactMap { $0.fileSize }.reduce(0, +)
         formattedTotalSize = Self.byteFormatter.string(fromByteCount: totalSize)
+        let averageBytes = entries.isEmpty ? 0 : totalSize / Int64(max(entries.count, 1))
+        averageSize = Self.byteFormatter.string(fromByteCount: averageBytes)
 
         var fmtCounts: [String: Int] = [:]
         var qualCounts: [String: Int] = [:]
@@ -108,6 +111,18 @@ struct StatsView: View {
                         statCard(title: "Total Size", value: s.formattedTotalSize, icon: "internaldrive.fill", color: .orange)
                         statCard(title: "Formats Used", value: "\(s.downloadsByFormat.count)", icon: "film", color: .purple)
                         statCard(title: "Channels", value: "\(s.topChannels.count)", icon: "person.2.fill", color: .green)
+                    }
+
+                    if !insights(for: s).isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Insights")
+                                .font(.headline)
+                            ForEach(insights(for: s), id: \.self) { insight in
+                                Label(insight, systemImage: "lightbulb")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
 
                     HStack(alignment: .top, spacing: 24) {
@@ -211,6 +226,23 @@ struct StatsView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 30, alignment: .trailing)
         }
+    }
+
+    private func insights(for stats: StatsSnapshot) -> [String] {
+        var results: [String] = []
+        if let topFormat = stats.downloadsByFormat.first {
+            results.append("Most common format: \(topFormat.0) (\(topFormat.1) downloads)")
+        }
+        if let topQuality = stats.downloadsByQuality.first {
+            results.append("Most used quality: \(topQuality.0)")
+        }
+        if let topChannel = stats.topChannels.first {
+            results.append("Top source: \(topChannel.0)")
+        }
+        if stats.totalDownloads > 0 {
+            results.append("Average file size: \(stats.averageSize)")
+        }
+        return results
     }
 }
 

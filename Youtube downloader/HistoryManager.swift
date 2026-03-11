@@ -15,6 +15,7 @@ struct HistoryEntry: Codable, Identifiable {
     var quality: String
     var format: String
     var fileSize: Int64?
+    var tags: [String] = []
 
     // Shared formatters — avoid recreating on every row render
     private static let dateFormatter: DateFormatter = {
@@ -71,7 +72,8 @@ class HistoryManager {
             outputPath: item.outputPath?.path,
             quality: item.quality.rawValue,
             format: item.format.rawValue,
-            fileSize: fileSize
+            fileSize: fileSize,
+            tags: []
         )
         entries.insert(entry, at: 0)
         save()
@@ -85,7 +87,8 @@ class HistoryManager {
         return entries.filter {
             $0.title.lowercased().contains(lower) ||
             $0.url.lowercased().contains(lower) ||
-            $0.channelName.lowercased().contains(lower)
+            $0.channelName.lowercased().contains(lower) ||
+            $0.tags.contains(where: { $0.lowercased().contains(lower) })
         }
     }
 
@@ -101,6 +104,16 @@ class HistoryManager {
         save()
     }
 
+    func updateTags(for entry: HistoryEntry, tagsText: String) {
+        guard let index = entries.firstIndex(where: { $0.id == entry.id }) else { return }
+        let tags = tagsText
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        entries[index].tags = tags
+        save()
+    }
+
     // MARK: - Export
 
     func exportJSON() -> Data? {
@@ -111,7 +124,7 @@ class HistoryManager {
     }
 
     func exportCSV() -> String {
-        var csv = "Title,URL,Channel,Date,Quality,Format,File Size\n"
+        var csv = "Title,URL,Channel,Date,Quality,Format,File Size,Tags\n"
         for entry in entries {
             let fields = [
                 entry.title,
@@ -120,7 +133,8 @@ class HistoryManager {
                 entry.formattedDate,
                 entry.quality,
                 entry.format,
-                entry.formattedFileSize
+                entry.formattedFileSize,
+                entry.tags.joined(separator: "; ")
             ].map { csvQuote($0) }
             csv += fields.joined(separator: ",") + "\n"
         }

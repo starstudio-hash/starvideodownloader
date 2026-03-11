@@ -39,6 +39,7 @@ struct Youtube_downloaderApp: App {
                     if settings.notificationsEnabled {
                         requestNotificationPermission()
                     }
+                    manager.performStartupChecks()
                     // Start clipboard monitoring if enabled
                     if settings.clipboardMonitoring {
                         manager.startClipboardMonitoring()

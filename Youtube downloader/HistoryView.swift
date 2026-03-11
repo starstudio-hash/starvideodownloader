@@ -138,6 +138,8 @@ struct HistoryRowView: View {
     var historyManager: HistoryManager
     var downloadManager: DownloadManager
     @State private var isHovered = false
+    @State private var showTagEditor = false
+    @State private var tagEditorText = ""
 
     var body: some View {
         HStack(spacing: 12) {
@@ -167,6 +169,19 @@ struct HistoryRowView: View {
                     Text(entry.formattedFileSize)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                if !entry.tags.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(entry.tags, id: \.self) { tag in
+                            Text(tag)
+                                .font(.caption2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                    }
                 }
 
                 Text(entry.formattedDate)
@@ -200,6 +215,46 @@ struct HistoryRowView: View {
                     }
                     .buttonStyle(.plain)
                     .help("Re-download")
+
+                    Button {
+                        NSWorkspace.shared.open(URL(string: entry.url)!)
+                    } label: {
+                        Image(systemName: "safari")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open original page")
+
+                    Button {
+                        tagEditorText = entry.tags.joined(separator: ", ")
+                        showTagEditor = true
+                    } label: {
+                        Image(systemName: "tag")
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit tags")
+                    .popover(isPresented: $showTagEditor) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Tags")
+                                .font(.headline)
+                            TextField("tutorial, music, favorite", text: $tagEditorText)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 220)
+                            Text("Comma-separated tags are searchable in History.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            HStack {
+                                Spacer()
+                                Button("Save") {
+                                    historyManager.updateTags(for: entry, tagsText: tagEditorText)
+                                    showTagEditor = false
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                            }
+                        }
+                        .padding(16)
+                    }
 
                     Button {
                         NSPasteboard.general.clearContents()

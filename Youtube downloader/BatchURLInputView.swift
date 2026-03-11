@@ -133,7 +133,7 @@ struct BatchURLInputView: View {
                     guard license.hasFullAccess else { return }
                     for url in parsedURLs {
                         guard license.canDownload else { break }
-                        if !manager.isDuplicate(url: url) {
+                        if manager.settings.duplicateHandling == .allow || manager.duplicateMessage(for: url) == nil {
                             manager.addDownload(
                                 url: url,
                                 quality: selectedQuality,

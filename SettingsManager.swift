@@ -5,6 +5,28 @@
 
 import Foundation
 
+enum DuplicateHandlingMode: String, CaseIterable, Identifiable {
+    case ask = "Ask"
+    case skip = "Skip"
+    case allow = "Allow"
+
+    var id: String { rawValue }
+}
+
+enum ClipboardMonitorAction: String, CaseIterable, Identifiable {
+    case notify = "Notify"
+    case addToQueue = "Add to Queue"
+
+    var id: String { rawValue }
+}
+
+enum SettingsPresentationMode: String, CaseIterable, Identifiable {
+    case simple = "Simple"
+    case advanced = "Advanced"
+
+    var id: String { rawValue }
+}
+
 @Observable
 class SettingsManager {
 
@@ -42,6 +64,7 @@ class SettingsManager {
 
     var notificationsEnabled: Bool = true
     var clipboardMonitoring: Bool = false
+    var clipboardAction: ClipboardMonitorAction = .notify
     var launchAtLogin: Bool = false
 
     // MARK: - Metadata & Organization
@@ -49,6 +72,7 @@ class SettingsManager {
     var filenameTemplate: String = "%(title)s.%(ext)s"
     var autoOrganize: Bool = false
     var organizeBy: String = "none"
+    var duplicateHandling: DuplicateHandlingMode = .ask
 
     // MARK: - Advanced
 
@@ -56,6 +80,8 @@ class SettingsManager {
     var scheduledDownloadTime: Date = Calendar.current.date(from: DateComponents(hour: 2, minute: 0)) ?? Date()
     var postDownloadAction: String = "none"
     var postDownloadScript: String = ""
+    var settingsPresentationMode: SettingsPresentationMode = .simple
+    var lastScheduledRunDate: Date? = nil
 
     // MARK: - Live Streams
 
@@ -117,14 +143,18 @@ class SettingsManager {
         static let matchFilter = "matchFilter"
         static let notifications = "notificationsEnabled"
         static let clipboard = "clipboardMonitoring"
+        static let clipboardAction = "clipboardAction"
         static let loginItem = "launchAtLogin"
         static let fnTemplate = "filenameTemplate"
         static let autoOrg = "autoOrganize"
         static let orgBy = "organizeBy"
+        static let duplicateHandling = "duplicateHandling"
         static let schedEnabled = "scheduledDownloadEnabled"
         static let schedTime = "scheduledDownloadTime"
         static let postAction = "postDownloadAction"
         static let postScript = "postDownloadScript"
+        static let settingsMode = "settingsPresentationMode"
+        static let lastScheduledRunDate = "lastScheduledRunDate"
         static let liveFromStart = "liveFromStart"
         static let waitForVideo = "waitForVideo"
         static let sleepIntervalEnabled = "sleepIntervalEnabled"
@@ -170,14 +200,24 @@ class SettingsManager {
         if let raw = d.string(forKey: Keys.matchFilter) { matchFilter = raw }
         if d.object(forKey: Keys.notifications) != nil { notificationsEnabled = d.bool(forKey: Keys.notifications) }
         if d.object(forKey: Keys.clipboard) != nil { clipboardMonitoring = d.bool(forKey: Keys.clipboard) }
+        if let raw = d.string(forKey: Keys.clipboardAction), let action = ClipboardMonitorAction(rawValue: raw) {
+            clipboardAction = action
+        }
         if d.object(forKey: Keys.loginItem) != nil { launchAtLogin = d.bool(forKey: Keys.loginItem) }
         if let raw = d.string(forKey: Keys.fnTemplate), !raw.isEmpty { filenameTemplate = raw }
         if d.object(forKey: Keys.autoOrg) != nil { autoOrganize = d.bool(forKey: Keys.autoOrg) }
         if let raw = d.string(forKey: Keys.orgBy) { organizeBy = raw }
+        if let raw = d.string(forKey: Keys.duplicateHandling), let handling = DuplicateHandlingMode(rawValue: raw) {
+            duplicateHandling = handling
+        }
         if d.object(forKey: Keys.schedEnabled) != nil { scheduledDownloadEnabled = d.bool(forKey: Keys.schedEnabled) }
         if d.object(forKey: Keys.schedTime) != nil, let date = d.object(forKey: Keys.schedTime) as? Date { scheduledDownloadTime = date }
         if let raw = d.string(forKey: Keys.postAction) { postDownloadAction = raw }
         if let raw = d.string(forKey: Keys.postScript) { postDownloadScript = raw }
+        if let raw = d.string(forKey: Keys.settingsMode), let mode = SettingsPresentationMode(rawValue: raw) {
+            settingsPresentationMode = mode
+        }
+        lastScheduledRunDate = d.object(forKey: Keys.lastScheduledRunDate) as? Date
         if d.object(forKey: Keys.liveFromStart) != nil { liveFromStart = d.bool(forKey: Keys.liveFromStart) }
         if d.object(forKey: Keys.waitForVideo) != nil { waitForVideo = d.bool(forKey: Keys.waitForVideo) }
         if d.object(forKey: Keys.sleepIntervalEnabled) != nil { sleepIntervalEnabled = d.bool(forKey: Keys.sleepIntervalEnabled) }
@@ -239,14 +279,18 @@ class SettingsManager {
         d.set(matchFilter, forKey: Keys.matchFilter)
         d.set(notificationsEnabled, forKey: Keys.notifications)
         d.set(clipboardMonitoring, forKey: Keys.clipboard)
+        d.set(clipboardAction.rawValue, forKey: Keys.clipboardAction)
         d.set(launchAtLogin, forKey: Keys.loginItem)
         d.set(filenameTemplate, forKey: Keys.fnTemplate)
         d.set(autoOrganize, forKey: Keys.autoOrg)
         d.set(organizeBy, forKey: Keys.orgBy)
+        d.set(duplicateHandling.rawValue, forKey: Keys.duplicateHandling)
         d.set(scheduledDownloadEnabled, forKey: Keys.schedEnabled)
         d.set(scheduledDownloadTime, forKey: Keys.schedTime)
         d.set(postDownloadAction, forKey: Keys.postAction)
         d.set(postDownloadScript, forKey: Keys.postScript)
+        d.set(settingsPresentationMode.rawValue, forKey: Keys.settingsMode)
+        d.set(lastScheduledRunDate, forKey: Keys.lastScheduledRunDate)
         d.set(outputDirectory.path, forKey: Keys.outputDir)
         d.set(liveFromStart, forKey: Keys.liveFromStart)
         d.set(waitForVideo, forKey: Keys.waitForVideo)
