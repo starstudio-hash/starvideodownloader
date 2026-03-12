@@ -1279,7 +1279,7 @@ struct TabBarView: View {
                             .font(.system(size: 12))
                         Text(tab.rawValue)
                             .font(.system(size: 12, weight: .medium))
-                        if tab == .convert && !license.hasFullAccess {
+                        if (tab == .convert || tab == .repair) && !license.hasFullAccess {
                             Text("(Pro)")
                                 .font(.system(size: 9))
                                 .foregroundStyle(.orange)
