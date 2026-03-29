@@ -186,7 +186,7 @@ class LicenseManager {
                 let message = json["message"] as? String ?? ""
 
                 if httpResponse.statusCode == 404 || message.lowercased().contains("not found") {
-                    lastError = "License key not found."
+                    lastError = "This license key was not found for this app build. If you purchased from Gumroad, download the latest version from starvideoapp.com and try again. If it still fails, contact support@starvideoapp.com."
                     return .invalidKey
                 }
 
