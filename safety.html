@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>Star Video Downloader Safety</title>
-    <meta name="description" content="Understand how Star Video Downloader works on Mac, what binaries it uses, how downloads are processed, and what to expect from Gatekeeper.">
+    <title>Star Video Downloader Safety — Mac and Windows PC</title>
+    <meta name="description" content="Understand how Star Video Downloader works on Mac and Windows PC, what binaries it uses, how downloads are processed, and what to expect from Gatekeeper or SmartScreen.">
     <link rel="canonical" href="https://starvideoapp.com/safety">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <link rel="icon" type="image/png" href="icon.png">
@@ -37,7 +37,9 @@
                 <a href="/help">Help</a>
                 <a href="/privacy">Privacy</a>
                 <a href="/pricing">Pricing</a>
-                <a href="https://github.com/starstudio-hash/starvideodownloader/releases/latest/download/Star.Video.Downloader.zip" class="btn btn-primary btn-sm">Download Free</a>
+                <a href="/mac-video-downloader">Mac</a>
+                <a href="/pc-video-downloader">PC</a>
+                <a href="/#download" class="btn btn-primary btn-sm">Download Free</a>
             </div>
         </div>
     </nav>
@@ -45,24 +47,24 @@
     <section class="page-hero">
         <div class="container">
             <h1>Safety and Trust</h1>
-            <p>This page explains what the app uses under the hood, what happens locally on your Mac, and why Gatekeeper may still ask for confirmation depending on your system and release state.</p>
+            <p>This page explains what the app uses under the hood, what happens locally on your Mac or Windows PC, and why Gatekeeper or SmartScreen may still ask for confirmation depending on your system and release state.</p>
         </div>
     </section>
 
     <section class="page-section">
         <div class="container prose">
             <h2>How the app works</h2>
-            <p>Star Video Downloader is a native macOS app written in SwiftUI. It uses <code>yt-dlp</code> for site extraction and <code>ffmpeg</code> / <code>ffprobe</code> for conversion, verification, and repair tasks.</p>
+            <p>Star Video Downloader is a desktop app for macOS and Windows PC. It uses <code>yt-dlp</code> for site extraction and <code>ffmpeg</code> / <code>ffprobe</code> for conversion, verification, and repair tasks.</p>
 
             <h2>What happens locally</h2>
             <ul>
-                <li>Video downloads happen directly on your Mac.</li>
+                <li>Video downloads happen directly on your Mac or Windows PC.</li>
                 <li>Conversion and repair happen locally with ffmpeg.</li>
-                <li>Queue persistence, history, and settings are stored in your Mac user profile.</li>
+                <li>Queue persistence, history, and settings are stored in your local user profile.</li>
             </ul>
 
-            <h2>About Gatekeeper</h2>
-            <p>macOS may still show an <strong>Open Anyway</strong> or quarantine warning depending on your machine, how the ZIP was downloaded, and whether an older cached copy is still present. The website always points to the latest GitHub release asset now, which reduces stale-download problems. If you hit trouble, see the <a href="/help">help page</a>.</p>
+            <h2>About Gatekeeper and SmartScreen</h2>
+            <p>macOS may still show an <strong>Open Anyway</strong> or quarantine warning, and Windows may show a SmartScreen warning while the PC build is new. Only continue when the ZIP came from starvideoapp.com or the linked GitHub release. If you hit trouble, see the <a href="/help">help page</a>.</p>
 
             <h2>Support</h2>
             <p>If you want to verify what the app is seeing, export the support bundle from Settings and send it to <a href="mailto:support@starvideoapp.com">support@starvideoapp.com</a>.</p>
