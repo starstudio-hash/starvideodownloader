@@ -1,0 +1,78 @@
+{
+  "name": "star-video-downloader-pc",
+  "productName": "Star Video Downloader",
+  "version": "1.0.0",
+  "description": "Windows PC version of Star Video Downloader using the same Gumroad Pro license flow.",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check-syntax.cjs",
+    "smoke:electron": "node scripts/electron-smoke.cjs",
+    "installer:win:x64": "electron-builder --win nsis --x64",
+    "installer:win": "npm run installer:win:x64",
+    "package:win:x64": "electron-packager . \"Star Video Downloader\" --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/test($|/)\" --ignore=\"^/node_modules($|/)\"",
+    "package:win:arm64": "electron-packager . \"Star Video Downloader\" --platform=win32 --arch=arm64 --out=dist --overwrite --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/test($|/)\" --ignore=\"^/node_modules($|/)\"",
+    "package:win": "npm run package:win:x64 && npm run package:win:arm64"
+  },
+  "build": {
+    "appId": "com.starvideoapp.downloader.pc",
+    "productName": "Star Video Downloader",
+    "copyright": "Copyright © 2026 Star Video Downloader",
+    "directories": {
+      "output": "installer-dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json",
+      "!dist{,/**/*}",
+      "!installer-dist{,/**/*}",
+      "!output{,/**/*}",
+      "!scripts{,/**/*}",
+      "!test{,/**/*}"
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "artifactName": "Star.Video.Downloader.Setup.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Star Video Downloader",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": null
+  },
+  "keywords": [
+    "video-downloader",
+    "youtube-downloader",
+    "windows",
+    "pc",
+    "yt-dlp",
+    "ffmpeg"
+  ],
+  "author": "Star Video Downloader",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@electron/packager": "^20.0.0",
+    "electron": "^42.1.0",
+    "electron-builder": "^26.8.1"
+  }
+}
