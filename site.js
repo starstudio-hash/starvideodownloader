@@ -14,7 +14,7 @@
         if (href.includes("releases/latest/download/Star.Video.Downloader.zip")) {
             return "download_click";
         }
-        if (href.includes("Star.Video.Downloader.Windows.zip")) {
+        if (href.includes("Star.Video.Downloader.Setup.exe") || href.includes("Star.Video.Downloader.Windows.zip")) {
             return "windows_download_click";
         }
         if (href.includes("firaskam.gumroad.com/l/xxmkcc")) {
