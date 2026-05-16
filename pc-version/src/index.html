@@ -20,7 +20,11 @@
 
       <nav class="nav-list" aria-label="Primary">
         <a href="#downloads" class="nav-link active">Downloads</a>
+        <a href="#queue" class="nav-link">Queue</a>
         <a href="#tools" class="nav-link">Tools</a>
+        <a href="#history" class="nav-link">History</a>
+        <a href="#stats" class="nav-link">Stats</a>
+        <a href="#settings" class="nav-link">Settings</a>
         <a href="#license" class="nav-link">Premium</a>
       </nav>
 
@@ -33,19 +37,25 @@
     <main class="workspace">
       <header class="topbar">
         <div>
-          <h1>Download, convert, and repair videos on PC.</h1>
-          <p>Paste a link, choose a format, and keep the same $5 Pro license you use through Gumroad.</p>
+          <h1>Download, convert, repair, and manage videos on PC.</h1>
+          <p>The Windows app now includes queue controls, saved settings, history, stats, scheduling helpers, and the same $5 Pro license flow as the Mac app.</p>
         </div>
-        <button class="button secondary" id="buyProTop">Buy Pro</button>
+        <div class="topbar-actions">
+          <div class="status-pills" id="statusPills"></div>
+          <button class="button secondary" id="buyProTop">Buy Pro</button>
+        </div>
       </header>
 
       <section class="panel" id="downloads">
         <div class="panel-header">
           <div>
             <h2>New Download</h2>
-            <p>Works with YouTube and 1000+ sites through yt-dlp.</p>
+            <p>Paste a link, inspect it first if you want, then queue it with your saved defaults.</p>
           </div>
-          <button class="button ghost" id="chooseOutput">Output folder</button>
+          <div class="panel-actions">
+            <button class="button ghost" id="chooseOutput">Output folder</button>
+            <button class="button ghost" id="inspectUrl">Inspect URL</button>
+          </div>
         </div>
 
         <div class="download-form">
@@ -60,6 +70,10 @@
           <label class="field">
             <span>Format</span>
             <select id="formatSelect"></select>
+          </label>
+          <label class="field">
+            <span>Schedule start</span>
+            <input id="scheduleInput" type="datetime-local">
           </label>
           <label class="check">
             <input id="subtitlesCheck" type="checkbox">
@@ -79,6 +93,47 @@
         <div class="output-line">
           <span class="muted-label">Saving to</span>
           <code id="outputDirectory">Downloads</code>
+        </div>
+
+        <div class="inspection-card hidden" id="inspectionCard">
+          <div class="inspection-header">
+            <strong id="inspectionTitle">No inspection yet</strong>
+            <span class="status-chip" id="inspectionBadge">Ready</span>
+          </div>
+          <div class="inspection-grid">
+            <div>
+              <span class="muted-label">Channel</span>
+              <p id="inspectionChannel">—</p>
+            </div>
+            <div>
+              <span class="muted-label">Duration</span>
+              <p id="inspectionDuration">—</p>
+            </div>
+            <div>
+              <span class="muted-label">Playlist</span>
+              <p id="inspectionPlaylist">No</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="queue">
+        <div class="panel-header">
+          <div>
+            <h2>Queue</h2>
+            <p id="queueSummary">Recent downloads, conversions, and repairs.</p>
+          </div>
+          <div class="panel-actions">
+            <button class="button ghost" id="exportQueue">Export Queue</button>
+            <button class="button ghost" id="importQueue">Import Queue</button>
+            <button class="button ghost" id="retryFailed">Retry Failed</button>
+            <button class="button ghost" id="removeFailed">Remove Failed</button>
+            <button class="button ghost" id="clearFinished">Clear Finished</button>
+            <button class="button ghost danger" id="clearQueue">Clear All</button>
+          </div>
+        </div>
+        <div class="queue" id="queueList">
+          <div class="empty-state">No jobs yet.</div>
         </div>
       </section>
 
@@ -109,11 +164,11 @@
       </section>
 
       <section class="panel split-panel">
-        <div>
+        <div id="convert">
           <div class="panel-header compact">
             <div>
               <h2>Convert</h2>
-              <p>Pro feature. Convert local files with ffmpeg.</p>
+              <p>Pro feature. Convert local files with your saved codec and quality settings.</p>
             </div>
           </div>
           <div class="mini-form">
@@ -129,11 +184,11 @@
           </div>
           <code class="file-line" id="convertFilePath">No file chosen</code>
         </div>
-        <div>
+        <div id="repair">
           <div class="panel-header compact">
             <div>
               <h2>Repair</h2>
-              <p>Pro feature. Rewrap or transcode damaged video files.</p>
+              <p>Pro feature. Rewrap quickly or deep-transcode damaged video files.</p>
             </div>
           </div>
           <div class="mini-form">
@@ -146,6 +201,291 @@
           </div>
           <code class="file-line" id="repairFilePath">No file chosen</code>
         </div>
+      </section>
+
+      <section class="panel" id="history">
+        <div class="panel-header">
+          <div>
+            <h2>History</h2>
+            <p id="historySummary">Completed downloads, conversions, and repairs are saved here.</p>
+          </div>
+          <div class="panel-actions">
+            <button class="button ghost" id="exportHistoryJson">Export JSON</button>
+            <button class="button ghost" id="exportHistoryCsv">Export CSV</button>
+            <button class="button ghost danger" id="clearHistory">Clear History</button>
+          </div>
+        </div>
+        <div class="history-list" id="historyList">
+          <div class="empty-state">No history yet.</div>
+        </div>
+      </section>
+
+      <section class="panel" id="stats">
+        <div class="panel-header">
+          <div>
+            <h2>Stats</h2>
+            <p>See how the Windows app is being used over time.</p>
+          </div>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="stats-lists">
+          <div class="stats-block">
+            <h3>By Format</h3>
+            <div id="statsByFormat" class="metric-list"></div>
+          </div>
+          <div class="stats-block">
+            <h3>By Quality</h3>
+            <div id="statsByQuality" class="metric-list"></div>
+          </div>
+          <div class="stats-block">
+            <h3>By Kind</h3>
+            <div id="statsByKind" class="metric-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="settings">
+        <div class="panel-header">
+          <div>
+            <h2>Settings</h2>
+            <p>Save the same kinds of defaults and automation helpers the Mac app exposes.</p>
+          </div>
+        </div>
+
+        <form class="settings-form" id="settingsForm">
+          <section class="settings-group">
+            <h3>Download Defaults</h3>
+            <div class="settings-grid">
+              <label class="field">
+                <span>Default quality</span>
+                <select id="settingDefaultQuality" data-setting="defaultQuality"></select>
+              </label>
+              <label class="field">
+                <span>Default format</span>
+                <select id="settingDefaultFormat" data-setting="defaultFormat"></select>
+              </label>
+              <label class="field">
+                <span>Max concurrent downloads</span>
+                <input id="settingMaxConcurrentDownloads" data-setting="maxConcurrentDownloads" type="number" min="1" max="10">
+              </label>
+              <label class="field field-wide">
+                <span>Filename template</span>
+                <input id="settingFilenameTemplate" data-setting="filenameTemplate" type="text" placeholder="%(title).200B.%(ext)s">
+              </label>
+              <label class="field">
+                <span>Organize downloads by</span>
+                <select id="settingOrganizeBy" data-setting="organizeBy">
+                  <option value="none">None</option>
+                  <option value="playlist">Playlist</option>
+                  <option value="channel">Channel</option>
+                  <option value="format">Format</option>
+                  <option value="date">Upload date</option>
+                </select>
+              </label>
+            </div>
+            <div class="inline-actions">
+              <label class="check">
+                <input id="settingDownloadSubtitlesByDefault" data-setting="downloadSubtitlesByDefault" type="checkbox">
+                <span>Download subtitles by default</span>
+              </label>
+              <label class="check">
+                <input id="settingAutoOrganize" data-setting="autoOrganize" type="checkbox">
+                <span>Auto-organize files</span>
+              </label>
+              <button type="button" class="button ghost" id="chooseDefaultOutputDirectory">Choose default output folder</button>
+              <code id="defaultOutputDirectoryLabel">Downloads</code>
+            </div>
+          </section>
+
+          <section class="settings-group">
+            <h3>Authentication, Duplicates, and yt-dlp Flags</h3>
+            <div class="settings-grid">
+              <label class="field">
+                <span>Duplicate handling</span>
+                <select id="settingDuplicateHandling" data-setting="duplicateHandling">
+                  <option value="ask">Ask</option>
+                  <option value="skip">Skip</option>
+                  <option value="allow">Allow</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Cookies from browser</span>
+                <select id="settingCookiesFromBrowser" data-setting="cookiesFromBrowser">
+                  <option value="none">None</option>
+                  <option value="chrome">Chrome</option>
+                  <option value="edge">Edge</option>
+                  <option value="firefox">Firefox</option>
+                  <option value="brave">Brave</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Rate limit</span>
+                <input id="settingRateLimitSpeed" data-setting="rateLimitSpeed" type="text" placeholder="2M">
+              </label>
+              <label class="field">
+                <span>Playlist item filter</span>
+                <input id="settingPlaylistItemsFilter" data-setting="playlistItemsFilter" type="text" placeholder="1-5,8,10">
+              </label>
+              <label class="field field-wide">
+                <span>Match filter</span>
+                <input id="settingMatchFilter" data-setting="matchFilter" type="text" placeholder="like_count>?100">
+              </label>
+              <label class="field field-wide">
+                <span>Format sort</span>
+                <input id="settingFormatSortString" data-setting="formatSortString" type="text" placeholder="res,ext:mp4:m4a">
+              </label>
+            </div>
+            <div class="inline-actions">
+              <label class="check">
+                <input id="settingRateLimitEnabled" data-setting="rateLimitEnabled" type="checkbox">
+                <span>Enable rate limit</span>
+              </label>
+              <label class="check">
+                <input id="settingUseDownloadArchive" data-setting="useDownloadArchive" type="checkbox">
+                <span>Use download archive</span>
+              </label>
+              <label class="check">
+                <input id="settingSponsorBlockEnabled" data-setting="sponsorBlockEnabled" type="checkbox">
+                <span>Enable SponsorBlock by default</span>
+              </label>
+              <label class="field inline-field">
+                <span>SponsorBlock mode</span>
+                <select id="settingSponsorBlockMode" data-setting="sponsorBlockMode">
+                  <option value="all">All</option>
+                  <option value="sponsor">Sponsor only</option>
+                  <option value="intro">Intro only</option>
+                  <option value="outro">Outro only</option>
+                  <option value="selfpromo">Self promo only</option>
+                </select>
+              </label>
+              <button type="button" class="button ghost" id="chooseCookiesFile">Choose cookies.txt</button>
+              <code id="cookiesFileLabel">No cookies file selected</code>
+            </div>
+          </section>
+
+          <section class="settings-group">
+            <h3>Metadata, Live Streams, and File Handling</h3>
+            <div class="settings-grid">
+              <label class="field">
+                <span>Concurrent fragments</span>
+                <input id="settingConcurrentFragments" data-setting="concurrentFragments" type="number" min="1" max="8">
+              </label>
+              <label class="field">
+                <span>File conflict behavior</span>
+                <select id="settingFileConflictBehavior" data-setting="fileConflictBehavior">
+                  <option value="rename">Rename</option>
+                  <option value="skip">Skip</option>
+                  <option value="overwrite">Overwrite</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Convert thumbnails</span>
+                <select id="settingConvertThumbnailsFormat" data-setting="convertThumbnailsFormat">
+                  <option value="">No conversion</option>
+                  <option value="jpg">JPG</option>
+                  <option value="png">PNG</option>
+                  <option value="webp">WebP</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Geo bypass country</span>
+                <input id="settingGeoBypassCountry" data-setting="geoBypassCountry" type="text" placeholder="SE">
+              </label>
+              <label class="field">
+                <span>Sleep interval min seconds</span>
+                <input id="settingSleepIntervalMin" data-setting="sleepIntervalMin" type="number" min="0" max="3600">
+              </label>
+              <label class="field">
+                <span>Sleep interval max seconds</span>
+                <input id="settingSleepIntervalMax" data-setting="sleepIntervalMax" type="number" min="0" max="3600">
+              </label>
+            </div>
+            <div class="inline-actions">
+              <label class="check"><input id="settingEmbedThumbnail" data-setting="embedThumbnail" type="checkbox"><span>Embed thumbnail</span></label>
+              <label class="check"><input id="settingEmbedMetadata" data-setting="embedMetadata" type="checkbox"><span>Embed metadata</span></label>
+              <label class="check"><input id="settingEmbedChapters" data-setting="embedChapters" type="checkbox"><span>Embed chapters</span></label>
+              <label class="check"><input id="settingSplitChapters" data-setting="splitChapters" type="checkbox"><span>Split chapters</span></label>
+              <label class="check"><input id="settingEmbedSubtitles" data-setting="embedSubtitles" type="checkbox"><span>Embed subtitles</span></label>
+              <label class="check"><input id="settingLiveFromStart" data-setting="liveFromStart" type="checkbox"><span>Live from start</span></label>
+              <label class="check"><input id="settingWaitForVideo" data-setting="waitForVideo" type="checkbox"><span>Wait for video</span></label>
+              <label class="check"><input id="settingGeoBypass" data-setting="geoBypass" type="checkbox"><span>Geo bypass</span></label>
+              <label class="check"><input id="settingSleepIntervalEnabled" data-setting="sleepIntervalEnabled" type="checkbox"><span>Random sleep interval</span></label>
+            </div>
+          </section>
+
+          <section class="settings-group">
+            <h3>Automation and Notifications</h3>
+            <div class="settings-grid">
+              <label class="field">
+                <span>Daily schedule time</span>
+                <input id="settingScheduledDownloadTime" data-setting="scheduledDownloadTime" type="time">
+              </label>
+              <label class="field">
+                <span>Clipboard action</span>
+                <select id="settingClipboardAction" data-setting="clipboardAction">
+                  <option value="notify">Notify</option>
+                  <option value="addToQueue">Add to Queue</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>After successful download</span>
+                <select id="settingPostDownloadAction" data-setting="postDownloadAction">
+                  <option value="none">Do nothing</option>
+                  <option value="openFolder">Open folder</option>
+                  <option value="openFile">Open file</option>
+                  <option value="runScript">Run script</option>
+                </select>
+              </label>
+              <label class="field field-wide">
+                <span>Post-download script</span>
+                <input id="settingPostDownloadScript" data-setting="postDownloadScript" type="text" placeholder="C:\Scripts\after-download.bat">
+              </label>
+            </div>
+            <div class="inline-actions">
+              <label class="check"><input id="settingClipboardMonitoring" data-setting="clipboardMonitoring" type="checkbox"><span>Monitor clipboard</span></label>
+              <label class="check"><input id="settingScheduledDownloadEnabled" data-setting="scheduledDownloadEnabled" type="checkbox"><span>Enable daily schedule gate</span></label>
+              <label class="check"><input id="settingNotificationsEnabled" data-setting="notificationsEnabled" type="checkbox"><span>Desktop notifications</span></label>
+              <label class="check"><input id="settingLaunchAtLogin" data-setting="launchAtLogin" type="checkbox"><span>Launch at login</span></label>
+              <button type="button" class="button ghost" id="choosePostDownloadScript">Choose script</button>
+              <code id="postDownloadScriptLabel">No script selected</code>
+            </div>
+          </section>
+
+          <section class="settings-group">
+            <h3>Conversion Defaults</h3>
+            <div class="settings-grid">
+              <label class="field">
+                <span>Video codec</span>
+                <select id="settingSelectedVideoCodec" data-setting="selectedVideoCodec">
+                  <option value="h264">H.264</option>
+                  <option value="hevc">H.265 (HEVC)</option>
+                  <option value="vp9">VP9</option>
+                  <option value="copy">Copy</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Audio codec</span>
+                <select id="settingSelectedAudioCodec" data-setting="selectedAudioCodec">
+                  <option value="aac">AAC</option>
+                  <option value="opus">Opus</option>
+                  <option value="flac">FLAC</option>
+                  <option value="copy">Copy</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Encoding quality</span>
+                <select id="settingEncodingQuality" data-setting="encodingQuality">
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </label>
+            </div>
+            <div class="inline-actions">
+              <label class="check"><input id="settingMacCompatibleEncoding" data-setting="macCompatibleEncoding" type="checkbox"><span>Mac-compatible H.264/AAC defaults</span></label>
+            </div>
+          </section>
+        </form>
       </section>
 
       <section class="panel" id="license">
@@ -161,18 +501,6 @@
           <button class="button primary" id="activateLicense">Activate</button>
           <button class="button ghost" id="validateLicense">Validate</button>
           <button class="button ghost danger" id="deactivateLicense">Deactivate</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-header">
-          <div>
-            <h2>Queue</h2>
-            <p>Recent downloads, conversions, and repairs.</p>
-          </div>
-        </div>
-        <div class="queue" id="queueList">
-          <div class="empty-state">No jobs yet.</div>
         </div>
       </section>
 
