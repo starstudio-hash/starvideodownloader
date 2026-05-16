@@ -15,10 +15,20 @@ done
 echo "Checking Mac and PC landing page links and sitemap..."
 rg -q "pc-video-downloader" "$ROOT_DIR/sitemap.xml"
 rg -q "mac-video-downloader" "$ROOT_DIR/sitemap.xml"
+rg -q "how-to-download-youtube-videos-pc" "$ROOT_DIR/sitemap.xml"
+rg -q "best-youtube-video-downloader-pc" "$ROOT_DIR/sitemap.xml"
+rg -q "video-converter-for-pc" "$ROOT_DIR/sitemap.xml"
 rg -q "$WINDOWS_INSTALLER_URL" "$ROOT_DIR/index.html"
 rg -q "$WINDOWS_INSTALLER_URL" "$ROOT_DIR/pc-video-downloader.html"
 rg -q "$WINDOWS_INSTALLER_URL" "$ROOT_DIR/pricing.html"
 rg -q "$WINDOWS_INSTALLER_URL" "$ROOT_DIR/about.html"
+rg -q "$WINDOWS_INSTALLER_URL" "$ROOT_DIR/how-to-download-youtube-videos-pc.html"
+rg -q "$WINDOWS_INSTALLER_URL" "$ROOT_DIR/best-youtube-video-downloader-pc.html"
+rg -q "$WINDOWS_INSTALLER_URL" "$ROOT_DIR/video-converter-for-pc.html"
+if rg -q "Star.Video.Downloader.Windows.zip" "$ROOT_DIR"/*.html "$ROOT_DIR/llms.txt"; then
+  echo "Found stale Windows ZIP reference in crawlable website content" >&2
+  exit 1
+fi
 rg -q "Star.Video.Downloader.zip" "$ROOT_DIR/mac-video-downloader.html"
 rg -q "YouTube video downloader for Mac" "$ROOT_DIR/mac-video-downloader.html"
 rg -q "Star.Video.Downloader.zip" "$ROOT_DIR/index.html"
@@ -33,6 +43,9 @@ rg -q "Windows PC" "$ROOT_DIR/help.html"
 rg -q "Mac and Windows PC" "$ROOT_DIR/about.html"
 rg -q "Mac and Windows PC" "$ROOT_DIR/privacy.html"
 rg -q "Mac or Windows PC" "$ROOT_DIR/safety.html"
+rg -q "How to download YouTube videos on PC" "$ROOT_DIR/how-to-download-youtube-videos-pc.html"
+rg -q "Best YouTube video downloader for PC" "$ROOT_DIR/best-youtube-video-downloader-pc.html"
+rg -q "Video converter for PC" "$ROOT_DIR/video-converter-for-pc.html"
 
 echo "Checking JSON-LD..."
 node - "$ROOT_DIR" <<'NODE'
@@ -40,13 +53,24 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const root = process.argv[2];
-const pages = ["index.html", "pricing.html", "mac-video-downloader.html", "pc-video-downloader.html", "guides.html", "comparisons.html"];
+const pages = fs.readdirSync(root).filter((entry) => entry.endsWith(".html")).sort();
+const requiredJsonLdPages = new Set([
+  "index.html",
+  "pricing.html",
+  "mac-video-downloader.html",
+  "pc-video-downloader.html",
+  "guides.html",
+  "comparisons.html",
+  "how-to-download-youtube-videos-pc.html",
+  "best-youtube-video-downloader-pc.html",
+  "video-converter-for-pc.html"
+]);
 
 for (const page of pages) {
   const html = fs.readFileSync(path.join(root, page), "utf8");
   const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
 
-  if (scripts.length === 0) {
+  if (scripts.length === 0 && requiredJsonLdPages.has(page)) {
     throw new Error(`${page} has no JSON-LD`);
   }
 

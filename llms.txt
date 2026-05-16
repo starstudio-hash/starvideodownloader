@@ -16,7 +16,8 @@ Star Video Downloader is built for Mac and Windows PC users who need a fast, pri
 - **Download:** Available at https://starvideoapp.com/
 - **Mac download:** https://github.com/starstudio-hash/starvideodownloader/releases/latest/download/Star.Video.Downloader.zip
 - **Mac landing page:** https://starvideoapp.com/mac-video-downloader
-- **Windows PC download:** https://starvideoapp.com/exp/Star.Video.Downloader.Windows.zip
+- **Windows PC download:** https://github.com/starstudio-hash/starvideodownloader/releases/latest/download/Star.Video.Downloader.Setup.exe
+- **Windows PC landing page:** https://starvideoapp.com/pc-video-downloader
 - **Purchase Pro:** https://firaskam.gumroad.com/l/xxmkcc
 
 ### Features
@@ -50,6 +51,9 @@ Star Video Downloader is built for Mac and Windows PC users who need a fast, pri
 - [Homepage](https://starvideoapp.com/): Main landing page with features, interactive demo, pricing, FAQ, and download links
 - [YouTube Video Downloader for Mac](https://starvideoapp.com/mac-video-downloader): macOS landing page with download, install steps, Pro licensing, Apple Silicon and Intel support, and Mac-specific FAQ
 - [YouTube Video Downloader for PC](https://starvideoapp.com/pc-video-downloader): Windows PC landing page with download, install steps, Pro licensing, and PC-specific FAQ
+- [How to Download YouTube Videos on PC](https://starvideoapp.com/how-to-download-youtube-videos-pc): Windows 10/11 guide for installing the setup app, adding helper tools, and saving YouTube videos locally
+- [Best YouTube Video Downloader for PC in 2026](https://starvideoapp.com/best-youtube-video-downloader-pc): Windows downloader comparison covering price, quality, playlists, conversion, repair, and command-line alternatives
+- [Video Converter for PC](https://starvideoapp.com/video-converter-for-pc): Windows guide for converting MP4, MKV, WebM, MOV, AVI, MP3, WAV, and other formats locally with no uploads
 - [Guides Hub](https://starvideoapp.com/guides): Topic hub for Mac and Windows PC setup, download, playlist, conversion, audio extraction, and repair tutorials
 - [Comparisons Hub](https://starvideoapp.com/comparisons): Topic hub for Star Video Downloader alternative and competitor comparison pages across desktop platforms
 - [Pricing and License](https://starvideoapp.com/pricing): Free vs Pro breakdown, one-time $5 pricing, and license key details
@@ -98,7 +102,7 @@ Star Video Downloader supports YouTube, TikTok, Instagram, Twitter/X, Vimeo, Fac
 Yes. Star Video Downloader is a universal binary that runs natively on both Apple Silicon (M1, M2, M3, M4) and Intel Macs. It requires macOS 14 Sonoma or later.
 
 ### Does it work on Windows PC?
-Yes. Star Video Downloader now includes a Windows x64 PC build for Windows 10 and Windows 11. The PC app uses the same Gumroad Pro product and license verification method as the Mac app.
+Yes. Star Video Downloader now includes a Windows x64 PC build for Windows 10 and Windows 11. The PC app is distributed as a setup installer named Star.Video.Downloader.Setup.exe and uses the same Gumroad Pro product and license verification method as the Mac app.
 
 ### Is it safe and private?
 Yes. All processing happens locally on your Mac or Windows PC. The app does not collect analytics, require an account, or send any data to external servers. Videos are downloaded directly from the source to your computer.

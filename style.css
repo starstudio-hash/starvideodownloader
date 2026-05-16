@@ -2110,6 +2110,206 @@ body {
     color: var(--gray-700);
 }
 
+/* ===== SEO Article Pages ===== */
+.seo-hero {
+    background:
+        radial-gradient(circle at 18% 12%, rgba(219, 234, 254, 0.82) 0, transparent 28%),
+        linear-gradient(135deg, #ffffff 0%, #f8fafc 55%, #eff6ff 100%);
+    padding: 112px 0 62px;
+}
+
+.seo-hero-inner {
+    max-width: 900px;
+}
+
+.seo-eyebrow {
+    color: var(--blue-600);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+}
+
+.seo-hero h1 {
+    color: var(--gray-900);
+    font-size: clamp(36px, 5vw, 64px);
+    letter-spacing: -0.045em;
+    line-height: 1.04;
+    margin: 0 0 20px;
+}
+
+.seo-hero p {
+    color: var(--gray-600);
+    font-size: 18px;
+    line-height: 1.75;
+    margin: 0;
+    max-width: 760px;
+}
+
+.seo-meta {
+    color: var(--gray-400);
+    font-size: 14px;
+    margin-bottom: 26px;
+}
+
+.seo-section {
+    padding: 72px 0;
+}
+
+.seo-section-muted {
+    background: var(--gray-50);
+}
+
+.seo-prose {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.seo-prose h2 {
+    color: var(--gray-900);
+    font-size: clamp(28px, 3vw, 38px);
+    letter-spacing: -0.026em;
+    line-height: 1.15;
+    margin: 42px 0 16px;
+}
+
+.seo-prose h2:first-child {
+    margin-top: 0;
+}
+
+.seo-prose h3 {
+    color: var(--gray-900);
+    font-size: 21px;
+    margin: 28px 0 10px;
+}
+
+.seo-prose p,
+.seo-prose li {
+    color: var(--gray-600);
+    font-size: 16px;
+    line-height: 1.82;
+}
+
+.seo-prose a {
+    color: var(--blue-600);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.seo-prose a:hover {
+    text-decoration: underline;
+}
+
+.seo-card-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 28px 0;
+}
+
+.seo-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 18px;
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.06);
+    padding: 24px;
+}
+
+.seo-card h3 {
+    margin-top: 0;
+}
+
+.seo-steps {
+    counter-reset: seo-step;
+    display: grid;
+    gap: 14px;
+    margin: 28px 0;
+}
+
+.seo-step {
+    align-items: flex-start;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 18px;
+    display: flex;
+    gap: 16px;
+    padding: 22px;
+}
+
+.seo-step::before {
+    align-items: center;
+    background: var(--blue-600);
+    border-radius: 999px;
+    color: white;
+    content: counter(seo-step);
+    counter-increment: seo-step;
+    display: flex;
+    flex: 0 0 auto;
+    font-weight: 800;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+}
+
+.seo-step h3 {
+    margin-top: 0;
+}
+
+.seo-table {
+    border-collapse: collapse;
+    margin: 28px 0;
+    overflow: hidden;
+    width: 100%;
+}
+
+.seo-table th,
+.seo-table td {
+    border: 1px solid var(--gray-200);
+    padding: 14px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.seo-table th {
+    background: var(--gray-50);
+    color: var(--gray-900);
+}
+
+.seo-callout {
+    background: var(--blue-50);
+    border: 1px solid #bfdbfe;
+    border-radius: 18px;
+    margin: 32px 0;
+    padding: 24px;
+}
+
+.seo-cta {
+    background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+    border-radius: 24px;
+    color: white;
+    margin-top: 44px;
+    padding: 38px;
+    text-align: center;
+}
+
+.seo-cta h2,
+.seo-cta p {
+    color: white;
+}
+
+.seo-cta p {
+    opacity: 0.84;
+}
+
+.seo-cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 22px;
+}
+
 /* ===== Responsive — Tablet (1024px) ===== */
 @media (max-width: 1024px) {
     .stats-grid {
@@ -2412,6 +2612,14 @@ body {
 
     .hub-callout {
         grid-template-columns: 1fr;
+    }
+
+    .seo-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .seo-hero {
+        padding: 92px 0 48px;
     }
 
     /* Footer */
