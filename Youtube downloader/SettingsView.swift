@@ -961,14 +961,14 @@ struct SettingsView: View {
                                 .controlSize(.small)
 
                                 Button("Open Help") {
-                                    NSWorkspace.shared.open(URL(string: "https://starvideoapp.com/help")!)
+                                    openWebPage("https://starvideoapp.com/help")
                                 }
                                 .buttonStyle(.plain)
                                 .font(.caption)
                                 .foregroundStyle(Color.accentColor)
 
                                 Button("Release Notes") {
-                                    NSWorkspace.shared.open(URL(string: "https://starvideoapp.com/release-notes")!)
+                                    openWebPage("https://starvideoapp.com/release-notes")
                                 }
                                 .buttonStyle(.plain)
                                 .font(.caption)
@@ -1174,6 +1174,15 @@ struct SettingsView: View {
         settings.duplicateHandling = .ask
         settings.saveSettings()
         manager.refreshBackendHealth(checkVersions: false)
+    }
+
+    private func openWebPage(_ value: String) {
+        guard let url = URL(string: value),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     private func chooseOutputDirectory() {

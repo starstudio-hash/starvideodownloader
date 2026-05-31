@@ -182,6 +182,16 @@ struct HistoryRowView: View {
     @State private var showTagEditor = false
     @State private var tagEditorText = ""
 
+    private var originalURL: URL? {
+        let rawURL = entry.url.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: rawURL),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return nil
+        }
+        return url
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
@@ -257,14 +267,16 @@ struct HistoryRowView: View {
                     .buttonStyle(.plain)
                     .help("Re-download")
 
-                    Button {
-                        NSWorkspace.shared.open(URL(string: entry.url)!)
-                    } label: {
-                        Image(systemName: "safari")
-                            .foregroundStyle(Color.accentColor)
+                    if let originalURL {
+                        Button {
+                            NSWorkspace.shared.open(originalURL)
+                        } label: {
+                            Image(systemName: "safari")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open original page")
                     }
-                    .buttonStyle(.plain)
-                    .help("Open original page")
 
                     Button {
                         tagEditorText = entry.tags.joined(separator: ", ")

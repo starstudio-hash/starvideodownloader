@@ -67,7 +67,7 @@ class HistoryManager {
 
         let entry = HistoryEntry(
             url: item.url,
-            duplicateKey: item.sourcePlaylistURL.map { "\($0)#\(item.playlistIndex ?? 0)" },
+            duplicateKey: item.sourcePlaylistURL.map { "\($0)#playlist-item=\(item.playlistIndex ?? 0)" },
             title: item.title,
             channelName: item.channelName,
             date: Date(),

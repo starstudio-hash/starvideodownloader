@@ -637,6 +637,7 @@ class DownloadManager {
     func addDownload(url: String, quality: VideoQuality? = nil, format: OutputFormat? = nil,
                      subtitles: Bool? = nil, playlistDownload: Bool = false,
                      sourcePlaylistURL: String? = nil,
+                     playlistIndex: Int? = nil,
                      scheduledStartDate: Date? = nil) -> Bool {
         // Enforce license: check daily download limit for free users
         if let lm = licenseManager, !lm.hasFullAccess, !lm.canDownload {
@@ -657,6 +658,7 @@ class DownloadManager {
             format: format ?? settings.defaultFormat,
             subtitles: subtitles ?? settings.downloadSubtitlesByDefault,
             playlistDownload: playlistDownload,
+            playlistIndex: playlistIndex,
             sourcePlaylistURL: sourcePlaylistURL,
             scheduledStartDate: scheduledStartDate
         )
@@ -2481,14 +2483,9 @@ class DownloadManager {
                     format: f,
                     subtitles: entry.subtitles,
                     sourcePlaylistURL: entry.sourcePlaylistURL,
+                    playlistIndex: entry.playlistIndex,
                     scheduledStartDate: entry.scheduledStartDate
                 )
-                if let sourcePlaylistURL = entry.sourcePlaylistURL,
-                   let playlistIndex = entry.playlistIndex,
-                   let addedItem = items.last {
-                    addedItem.sourcePlaylistURL = sourcePlaylistURL
-                    addedItem.playlistIndex = playlistIndex
-                }
             }
         }
     }
