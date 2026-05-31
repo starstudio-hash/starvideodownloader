@@ -16,6 +16,7 @@ const { buildYtDlpArgs, parseYtDlpProgress } = require("./download-command");
 const { HistoryStore } = require("./history-store");
 const { LicenseStore } = require("./license-store");
 const { buildFfmpegConvertArgs, buildFfmpegRepairArgs } = require("./media-command");
+const { buildPostDownloadScriptCommand } = require("./post-download-script");
 const { SettingsStore } = require("./settings-store");
 const {
   buildToolPaths,
@@ -25,6 +26,7 @@ const {
   installYtDlp,
   makeProcessEnv
 } = require("./tool-manager");
+const { normalizeHttpUrl } = require("./url-policy");
 
 const QUEUE_FILE = "queue.json";
 const HISTORY_FILE = "history.json";
@@ -908,7 +910,8 @@ function runPostDownloadScript(job, scriptPath) {
   }
 
   try {
-    const child = spawn(target, [job.outputPath || "", job.url || ""], {
+    const script = buildPostDownloadScriptCommand(target, job);
+    const child = spawn(script.command, script.args, {
       detached: true,
       env: {
         ...makeProcessEnv(app.getPath("userData")),
@@ -919,7 +922,6 @@ function runPostDownloadScript(job, scriptPath) {
         STAR_VIDEO_OUTPUT_PATH: job.outputPath || "",
         STAR_VIDEO_OUTPUT_DIRECTORY: job.outputDirectory || ""
       },
-      shell: true,
       stdio: "ignore",
       windowsHide: true
     });
@@ -1267,7 +1269,11 @@ function registerIpc() {
   ipcMain.handle("app:getState", () => getState());
 
   ipcMain.handle("shell:openBuy", async () => {
-    await shell.openExternal(BUY_PRO_URL);
+    const target = normalizeHttpUrl(BUY_PRO_URL);
+    if (!target) {
+      return false;
+    }
+    await shell.openExternal(target);
     return true;
   });
 
@@ -1284,7 +1290,7 @@ function registerIpc() {
   });
 
   ipcMain.handle("shell:openExternal", async (_event, url) => {
-    const target = String(url || "").trim();
+    const target = normalizeHttpUrl(url);
     if (!target) {
       return false;
     }
