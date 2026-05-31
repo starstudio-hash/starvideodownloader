@@ -1,0 +1,32 @@
+{
+  "name": "star-video-downloader-pc",
+  "productName": "Star Video Downloader",
+  "version": "1.0.0",
+  "description": "Windows PC version of Star Video Downloader using the same Gumroad Pro license flow.",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check-syntax.cjs",
+    "smoke:electron": "node scripts/electron-smoke.cjs",
+    "package:win:x64": "electron-packager . \"Star Video Downloader\" --platform=win32 --arch=x64 --out=dist --overwrite --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/test($|/)\" --ignore=\"^/node_modules($|/)\"",
+    "package:win:arm64": "electron-packager . \"Star Video Downloader\" --platform=win32 --arch=arm64 --out=dist --overwrite --prune=true --ignore=\"^/dist($|/)\" --ignore=\"^/test($|/)\" --ignore=\"^/node_modules($|/)\"",
+    "package:win": "npm run package:win:x64 && npm run package:win:arm64"
+  },
+  "keywords": [
+    "video-downloader",
+    "youtube-downloader",
+    "windows",
+    "pc",
+    "yt-dlp",
+    "ffmpeg"
+  ],
+  "author": "Star Video Downloader",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@electron/packager": "^20.0.0",
+    "electron": "^42.1.0"
+  }
+}

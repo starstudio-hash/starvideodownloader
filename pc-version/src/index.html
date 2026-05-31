@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src https://api.gumroad.com https://github.com https://objects.githubusercontent.com;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Star Video Downloader for PC</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div>
+          <div class="brand-name">Star Video Downloader</div>
+          <div class="brand-subtitle">Windows PC</div>
+        </div>
+      </div>
+
+      <nav class="nav-list" aria-label="Primary">
+        <a href="#downloads" class="nav-link active">Downloads</a>
+        <a href="#tools" class="nav-link">Tools</a>
+        <a href="#license" class="nav-link">Premium</a>
+      </nav>
+
+      <div class="license-card" id="licenseSummary">
+        <div class="muted-label">License</div>
+        <strong>Loading...</strong>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <h1>Download, convert, and repair videos on PC.</h1>
+          <p>Paste a link, choose a format, and keep the same $5 Pro license you use through Gumroad.</p>
+        </div>
+        <button class="button secondary" id="buyProTop">Buy Pro</button>
+      </header>
+
+      <section class="panel" id="downloads">
+        <div class="panel-header">
+          <div>
+            <h2>New Download</h2>
+            <p>Works with YouTube and 1000+ sites through yt-dlp.</p>
+          </div>
+          <button class="button ghost" id="chooseOutput">Output folder</button>
+        </div>
+
+        <div class="download-form">
+          <label class="field wide">
+            <span>Video URL</span>
+            <input id="urlInput" type="url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Quality</span>
+            <select id="qualitySelect"></select>
+          </label>
+          <label class="field">
+            <span>Format</span>
+            <select id="formatSelect"></select>
+          </label>
+          <label class="check">
+            <input id="subtitlesCheck" type="checkbox">
+            <span>Subtitles</span>
+          </label>
+          <label class="check">
+            <input id="playlistCheck" type="checkbox">
+            <span>Playlist</span>
+          </label>
+          <label class="check">
+            <input id="sponsorBlockCheck" type="checkbox">
+            <span>SponsorBlock</span>
+          </label>
+          <button class="button primary" id="startDownload">Start Download</button>
+        </div>
+
+        <div class="output-line">
+          <span class="muted-label">Saving to</span>
+          <code id="outputDirectory">Downloads</code>
+        </div>
+      </section>
+
+      <section class="panel" id="tools">
+        <div class="panel-header">
+          <div>
+            <h2>PC Tools</h2>
+            <p>Install the Windows binaries the app uses locally.</p>
+          </div>
+        </div>
+        <div class="tool-grid">
+          <div class="tool-card">
+            <div>
+              <h3>yt-dlp.exe</h3>
+              <p id="ytdlpStatus">Checking...</p>
+            </div>
+            <button class="button secondary" id="installYtDlp">Install / Update</button>
+          </div>
+          <div class="tool-card">
+            <div>
+              <h3>ffmpeg.exe</h3>
+              <p id="ffmpegStatus">Checking...</p>
+            </div>
+            <button class="button secondary" id="installFfmpeg">Install / Update</button>
+          </div>
+        </div>
+        <p class="tool-message" id="toolMessage"></p>
+      </section>
+
+      <section class="panel split-panel">
+        <div>
+          <div class="panel-header compact">
+            <div>
+              <h2>Convert</h2>
+              <p>Pro feature. Convert local files with ffmpeg.</p>
+            </div>
+          </div>
+          <div class="mini-form">
+            <button class="button ghost" id="chooseConvertFile">Choose file</button>
+            <select id="convertFormat">
+              <option>MP4</option>
+              <option>MKV</option>
+              <option>WebM</option>
+              <option>MP3</option>
+              <option>M4A</option>
+            </select>
+            <button class="button primary" id="convertFile">Convert</button>
+          </div>
+          <code class="file-line" id="convertFilePath">No file chosen</code>
+        </div>
+        <div>
+          <div class="panel-header compact">
+            <div>
+              <h2>Repair</h2>
+              <p>Pro feature. Rewrap or transcode damaged video files.</p>
+            </div>
+          </div>
+          <div class="mini-form">
+            <button class="button ghost" id="chooseRepairFile">Choose file</button>
+            <select id="repairMode">
+              <option value="rewrap">Fast rewrap</option>
+              <option value="transcode">Deep transcode</option>
+            </select>
+            <button class="button primary" id="repairFile">Repair</button>
+          </div>
+          <code class="file-line" id="repairFilePath">No file chosen</code>
+        </div>
+      </section>
+
+      <section class="panel" id="license">
+        <div class="panel-header">
+          <div>
+            <h2>Premium License</h2>
+            <p>Uses the same Gumroad purchase and license-key verification as the Mac version.</p>
+          </div>
+          <button class="button secondary" id="buyProLicense">Buy Pro - $5</button>
+        </div>
+        <div class="license-form">
+          <input id="licenseKeyInput" type="text" placeholder="Paste Gumroad license key">
+          <button class="button primary" id="activateLicense">Activate</button>
+          <button class="button ghost" id="validateLicense">Validate</button>
+          <button class="button ghost danger" id="deactivateLicense">Deactivate</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Queue</h2>
+            <p>Recent downloads, conversions, and repairs.</p>
+          </div>
+        </div>
+        <div class="queue" id="queueList">
+          <div class="empty-state">No jobs yet.</div>
+        </div>
+      </section>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+  <script src="./renderer.js"></script>
+</body>
+</html>
