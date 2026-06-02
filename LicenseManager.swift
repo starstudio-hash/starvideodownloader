@@ -49,10 +49,23 @@ class LicenseManager {
     // MARK: - Computed Properties
 
     var currentTier: LicenseTier {
+        if isUsingDebugProUnlock {
+            return .pro
+        }
         if !licenseKey.isEmpty && !instanceID.isEmpty {
             return .pro
         }
         return .free
+    }
+
+    var isUsingDebugProUnlock: Bool {
+        #if DEBUG
+        let process = ProcessInfo.processInfo
+        return process.arguments.contains("--dev-pro") ||
+            process.environment["STAR_DOWNLOADER_DEV_PRO"] == "1"
+        #else
+        return false
+        #endif
     }
 
     var isPro: Bool { currentTier == .pro }

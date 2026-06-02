@@ -75,6 +75,11 @@ struct SettingsView: View {
                             }
 
                             if license.isPro {
+                                if license.isUsingDebugProUnlock {
+                                    Text("Running a local Debug build with Pro features unlocked.")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else {
                                 HStack {
                                     Text(maskedKey(license.licenseKey))
                                         .font(.system(.callout, design: .monospaced))
@@ -85,6 +90,7 @@ struct SettingsView: View {
                                     }
                                     .buttonStyle(SecondaryButtonStyle())
                                     .controlSize(.small)
+                                }
                                 }
                             } else {
                                 HStack(spacing: 8) {

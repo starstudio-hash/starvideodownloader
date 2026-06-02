@@ -521,17 +521,87 @@ class DownloadManager {
     }
 
     private static func runSimpleCommand(executablePath: String, arguments: [String], env: [String: String]) -> String {
+        guard let result = runCommandCollectingOutput(executablePath: executablePath, arguments: arguments, env: env),
+              result.terminationStatus == 0 else {
+            return ""
+        }
+
+        return String(data: result.stdout, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    private struct CommandOutput {
+        var terminationStatus: Int32
+        var stdout: Data
+        var stderr: Data
+    }
+
+    private static func runCommandCollectingOutput(
+        executablePath: String,
+        arguments: [String],
+        env: [String: String]
+    ) -> CommandOutput? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executablePath)
         process.arguments = arguments
         process.environment = env
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        do { try process.run() } catch { return "" }
+
+        let stdout = Pipe()
+        let stderr = Pipe()
+        process.standardOutput = stdout
+        process.standardError = stderr
+
+        let stdoutLock = NSLock()
+        let stderrLock = NSLock()
+        var stdoutData = Data()
+        var stderrData = Data()
+
+        stdout.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else { return }
+            stdoutLock.lock()
+            stdoutData.append(data)
+            stdoutLock.unlock()
+        }
+        stderr.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty else { return }
+            stderrLock.lock()
+            stderrData.append(data)
+            stderrLock.unlock()
+        }
+
+        do {
+            try process.run()
+        } catch {
+            stdout.fileHandleForReading.readabilityHandler = nil
+            stderr.fileHandleForReading.readabilityHandler = nil
+            return nil
+        }
+
         process.waitUntilExit()
-        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        stdout.fileHandleForReading.readabilityHandler = nil
+        stderr.fileHandleForReading.readabilityHandler = nil
+
+        let remainingStdout = stdout.fileHandleForReading.readDataToEndOfFile()
+        let remainingStderr = stderr.fileHandleForReading.readDataToEndOfFile()
+
+        stdoutLock.lock()
+        stdoutData.append(remainingStdout)
+        let finalStdout = stdoutData
+        stdoutLock.unlock()
+
+        stderrLock.lock()
+        stderrData.append(remainingStderr)
+        let finalStderr = stderrData
+        stderrLock.unlock()
+
+        return CommandOutput(
+            terminationStatus: process.terminationStatus,
+            stdout: finalStdout,
+            stderr: finalStderr
+        )
     }
 
     // MARK: - Duplicate detection
@@ -1091,29 +1161,16 @@ class DownloadManager {
     private func fetchPlaylistEntries(url: String) -> PlaylistFetchResult? {
         guard isYtdlpInstalled else { return nil }
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: ytdlpPath)
-        process.arguments = ["--flat-playlist", "--dump-single-json", "--no-warnings", url]
-        process.environment = buildCleanEnvironment()
-
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
-
-        do {
-            try process.run()
-        } catch {
-            return nil
-        }
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
+        guard let result = Self.runCommandCollectingOutput(
+            executablePath: ytdlpPath,
+            arguments: ["--flat-playlist", "--dump-single-json", "--no-warnings", url],
+            env: buildCleanEnvironment()
+        ),
+        result.terminationStatus == 0 else {
             return nil
         }
 
-        let data = stdout.fileHandleForReading.readDataToEndOfFile()
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        guard let json = try? JSONSerialization.jsonObject(with: result.stdout) as? [String: Any] else {
             return nil
         }
 
@@ -1169,25 +1226,13 @@ class DownloadManager {
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self else { return }
 
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: ytdlp)
-            process.arguments = ["--dump-single-json", "--skip-download", "--no-playlist", "--no-warnings", url]
-            process.environment = env
-
-            let stdout = Pipe()
-            process.standardOutput = stdout
-            process.standardError = Pipe()
-
-            do {
-                try process.run()
-            } catch {
-                return
-            }
-            process.waitUntilExit()
-
-            guard process.terminationStatus == 0 else { return }
-            let data = stdout.fileHandleForReading.readDataToEndOfFile()
-            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+            guard let result = Self.runCommandCollectingOutput(
+                executablePath: ytdlp,
+                arguments: ["--dump-single-json", "--skip-download", "--no-playlist", "--no-warnings", url],
+                env: env
+            ),
+            result.terminationStatus == 0 else { return }
+            guard let json = try? JSONSerialization.jsonObject(with: result.stdout) as? [String: Any] else { return }
 
             let title = (json["title"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
             let channel = (json["channel"] as? String ?? json["uploader"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1714,7 +1759,9 @@ class DownloadManager {
 
             if let mkvPath {
                 let outputExt = videoCodec.preferredContainer
-                let outputFilePath = mkvPath.deletingPathExtension().appendingPathExtension(outputExt)
+                let conversionDestination = Self.conversionDestination(for: mkvPath, preferredExtension: outputExt)
+                let ffmpegOutputFilePath = conversionDestination.ffmpegOutputURL
+                let finalOutputFilePath = conversionDestination.finalOutputURL
                 DispatchQueue.main.async { item.status = .processing(progress: 0) }
 
                 // Get the video duration first so we can report percentage progress.
@@ -1725,64 +1772,85 @@ class DownloadManager {
                 let audioArgs: [String] = ["-c:a", audioCodec.ffmpegEncoder] + audioCodec.qualityArgs(quality: encodingQuality)
 
                 var success = false
+                var conversionError: String? = nil
 
                 if videoCodec == .copy {
                     // Stream copy — no re-encoding
-                    success = runFfmpeg(
+                    let result = runFfmpeg(
                         ffmpegPath: ffmpegPath,
                         input: mkvPath.path,
-                        output: outputFilePath.path,
+                        output: ffmpegOutputFilePath.path,
                         videoCodec: "copy",
                         codecArgs: audioArgs,
                         totalSeconds: totalSeconds,
                         item: item
                     )
+                    success = result.succeeded
+                    conversionError = result.errorMessage
                 } else if let hwEncoder = videoCodec.hardwareEncoder {
                     // Try hardware encoder first
                     let hwArgs = videoCodec.hardwareQualityArgs(quality: encodingQuality) + audioArgs
-                    success = runFfmpeg(
+                    let hwResult = runFfmpeg(
                         ffmpegPath: ffmpegPath,
                         input: mkvPath.path,
-                        output: outputFilePath.path,
+                        output: ffmpegOutputFilePath.path,
                         videoCodec: hwEncoder,
                         codecArgs: hwArgs,
                         totalSeconds: totalSeconds,
                         item: item
                     )
+                    success = hwResult.succeeded
+                    conversionError = hwResult.errorMessage
                     // Fall back to software encoder if hardware failed
                     if !success, let swEncoder = videoCodec.softwareEncoder {
                         let swArgs = videoCodec.softwareQualityArgs(quality: encodingQuality) + audioArgs
-                        success = runFfmpeg(
+                        let swResult = runFfmpeg(
                             ffmpegPath: ffmpegPath,
                             input: mkvPath.path,
-                            output: outputFilePath.path,
+                            output: ffmpegOutputFilePath.path,
                             videoCodec: swEncoder,
                             codecArgs: swArgs,
                             totalSeconds: totalSeconds,
                             item: item
                         )
+                        success = swResult.succeeded
+                        conversionError = swResult.errorMessage
                     }
                 } else if let swEncoder = videoCodec.softwareEncoder {
                     // Software-only codec (e.g., VP9)
                     let swArgs = videoCodec.softwareQualityArgs(quality: encodingQuality) + audioArgs
-                    success = runFfmpeg(
+                    let result = runFfmpeg(
                         ffmpegPath: ffmpegPath,
                         input: mkvPath.path,
-                        output: outputFilePath.path,
+                        output: ffmpegOutputFilePath.path,
                         videoCodec: swEncoder,
                         codecArgs: swArgs,
                         totalSeconds: totalSeconds,
                         item: item
                     )
+                    success = result.succeeded
+                    conversionError = result.errorMessage
                 }
 
                 if success {
-                    // Remove original MKV if output is a different file
-                    if mkvPath.path != outputFilePath.path {
+                    if ffmpegOutputFilePath.standardizedFileURL.path != finalOutputFilePath.standardizedFileURL.path {
+                        try? FileManager.default.removeItem(at: finalOutputFilePath)
+                        do {
+                            try FileManager.default.moveItem(at: ffmpegOutputFilePath, to: finalOutputFilePath)
+                        } catch {
+                            DispatchQueue.main.async {
+                                item.status = .failed("Video conversion failed: \(error.localizedDescription)")
+                                self.scheduleQueuePersistence()
+                            }
+                            return
+                        }
+                    }
+                    // Remove original MKV if output is a different file.
+                    if mkvPath.standardizedFileURL.path != finalOutputFilePath.standardizedFileURL.path {
                         try? FileManager.default.removeItem(at: mkvPath)
                     }
                     DispatchQueue.main.async {
-                        item.outputPath = outputFilePath
+                        item.outputPath = finalOutputFilePath
                         item.status = .completed
                         self.historyManager.record(item: item)
                         self.postNotification(title: "Download Complete", body: item.title)
@@ -1794,7 +1862,7 @@ class DownloadManager {
                     }
                 } else {
                     DispatchQueue.main.async {
-                        item.status = .failed("Video conversion failed. The video was downloaded but could not be converted.")
+                        item.status = .failed(Self.videoConversionFailureMessage(details: conversionError))
                         self.scheduleQueuePersistence()
                     }
                 }
@@ -1828,7 +1896,12 @@ class DownloadManager {
         }
     }
 
-    /// Runs ffmpeg with the given codec and returns true if it succeeded.
+    private struct FfmpegRunResult {
+        var succeeded: Bool
+        var errorMessage: String?
+    }
+
+    /// Runs ffmpeg with the given codec and reports whether it succeeded.
     /// Updates item.status with processing progress as ffmpeg runs.
     @discardableResult
     private func runFfmpeg(
@@ -1839,7 +1912,7 @@ class DownloadManager {
         codecArgs: [String],
         totalSeconds: Double,
         item: DownloadItem
-    ) -> Bool {
+    ) -> FfmpegRunResult {
         // Reset progress display for retry attempts
         DispatchQueue.main.async {
             item.status = .processing(progress: 0)
@@ -1867,6 +1940,7 @@ class DownloadManager {
         DispatchQueue.main.async { self.processes[item.id] = ffmpeg }
 
         var lineBuffer = ""
+        var stderrBuffer = ""
         var lastProgressUpdate = DispatchTime.now()
         outPipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             guard self != nil else { return }
@@ -1897,20 +1971,67 @@ class DownloadManager {
             }
         }
 
+        errPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            guard !data.isEmpty, let chunk = String(data: data, encoding: .utf8) else { return }
+            stderrBuffer += chunk
+            if stderrBuffer.count > 524_288 {
+                stderrBuffer = String(stderrBuffer.suffix(32768))
+            }
+        }
+
         guard (try? ffmpeg.run()) != nil else {
+            outPipe.fileHandleForReading.readabilityHandler = nil
+            errPipe.fileHandleForReading.readabilityHandler = nil
             DispatchQueue.main.async {
                 self.processes.removeValue(forKey: item.id)
                 self.scheduleQueuePersistence()
             }
-            return false
+            return FfmpegRunResult(succeeded: false, errorMessage: "Could not start ffmpeg.")
         }
         ffmpeg.waitUntilExit()
         outPipe.fileHandleForReading.readabilityHandler = nil
+        errPipe.fileHandleForReading.readabilityHandler = nil
+        let remainingStderr = errPipe.fileHandleForReading.readDataToEndOfFile()
+        if let remaining = String(data: remainingStderr, encoding: .utf8), !remaining.isEmpty {
+            stderrBuffer += remaining
+        }
         DispatchQueue.main.async {
             self.processes.removeValue(forKey: item.id)
             self.scheduleQueuePersistence()
         }
-        return ffmpeg.terminationStatus == 0
+        return FfmpegRunResult(
+            succeeded: ffmpeg.terminationStatus == 0,
+            errorMessage: Self.extractLastFfmpegError(from: stderrBuffer)
+        )
+    }
+
+    private static func videoConversionFailureMessage(details: String?) -> String {
+        guard let details, !details.isEmpty else {
+            return "Video conversion failed. The video was downloaded but could not be converted."
+        }
+        return "Video conversion failed: \(details)"
+    }
+
+    static func conversionDestination(
+        for inputURL: URL,
+        preferredExtension: String
+    ) -> (ffmpegOutputURL: URL, finalOutputURL: URL) {
+        let finalOutputURL = inputURL.deletingPathExtension().appendingPathExtension(preferredExtension)
+        guard inputURL.standardizedFileURL.path == finalOutputURL.standardizedFileURL.path else {
+            return (finalOutputURL, finalOutputURL)
+        }
+
+        let directory = inputURL.deletingLastPathComponent()
+        let baseName = inputURL.deletingPathExtension().lastPathComponent
+        var candidate: URL
+        repeat {
+            candidate = directory
+                .appendingPathComponent("\(baseName).converted-\(UUID().uuidString)")
+                .appendingPathExtension(preferredExtension)
+        } while FileManager.default.fileExists(atPath: candidate.path)
+
+        return (candidate, finalOutputURL)
     }
 
     /// Uses ffprobe to get the duration of a video file in seconds. Returns 0 on failure.
@@ -2085,6 +2206,43 @@ class DownloadManager {
         return cleaned.isEmpty ? "Download failed" : cleaned
     }
 
+    private static func extractLastFfmpegError(from stderr: String) -> String? {
+        let lines = stderr
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let preferredFragments = [
+            "Error opening",
+            "Invalid data",
+            "Conversion failed",
+            "No such file",
+            "Permission denied",
+            "same as Input"
+        ]
+        if let line = lines.last(where: { line in
+            preferredFragments.contains { line.localizedCaseInsensitiveContains($0) }
+        }) {
+            return cleanFfmpegErrorLine(line)
+        }
+
+        if let line = lines.last(where: { $0.localizedCaseInsensitiveContains("error") }) {
+            return cleanFfmpegErrorLine(line)
+        }
+
+        return nil
+    }
+
+    private static func cleanFfmpegErrorLine(_ line: String) -> String {
+        let cleaned = line
+            .replacingOccurrences(of: "Error: ", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.count > 180 {
+            return String(cleaned.prefix(180)) + "..."
+        }
+        return cleaned
+    }
+
     // MARK: - Environment
 
     /// Cached clean environment — built once and reused across all process launches.
@@ -2144,6 +2302,10 @@ class DownloadManager {
             if !path.isEmpty { return (nil, URL(fileURLWithPath: path), nil, nil, nil) }
         }
 
+        if let alreadyDownloadedURL = alreadyDownloadedOutputURL(from: line) {
+            return (nil, alreadyDownloadedURL, nil, nil, nil)
+        }
+
         // [Merger] Merging formats into "/path/to/file"
         if line.hasPrefix("[Merger] Merging formats into") {
             if let start = line.firstIndex(of: "\""), let end = line.lastIndex(of: "\""), start != end {
@@ -2179,6 +2341,19 @@ class DownloadManager {
         }
 
         return (nil, nil, nil, nil, nil)
+    }
+
+    static func alreadyDownloadedOutputURL(from line: String) -> URL? {
+        let alreadyDownloadedPrefix = "[download] "
+        let alreadyDownloadedSuffix = " has already been downloaded"
+        guard line.hasPrefix(alreadyDownloadedPrefix), line.hasSuffix(alreadyDownloadedSuffix) else {
+            return nil
+        }
+        let start = line.index(line.startIndex, offsetBy: alreadyDownloadedPrefix.count)
+        let end = line.index(line.endIndex, offsetBy: -alreadyDownloadedSuffix.count)
+        let path = String(line[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !path.isEmpty else { return nil }
+        return URL(fileURLWithPath: path)
     }
 
     // MARK: - Notifications

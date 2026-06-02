@@ -50,6 +50,20 @@ enum InternalRegressionChecks {
         } else {
             assertionFailure("Active downloads should not silently restore as running.")
         }
+
+        let alreadyMP4 = URL(fileURLWithPath: "/tmp/star-video.mp4")
+        let alreadyMP4Destination = DownloadManager.conversionDestination(for: alreadyMP4, preferredExtension: "mp4")
+        assert(alreadyMP4Destination.finalOutputURL == alreadyMP4, "Final conversion path should preserve the requested MP4 path.")
+        assert(alreadyMP4Destination.ffmpegOutputURL != alreadyMP4, "ffmpeg should not write over its input file.")
+        assert(alreadyMP4Destination.ffmpegOutputURL.pathExtension == "mp4", "Temporary conversion output should keep the requested extension.")
+
+        let mergedMKV = URL(fileURLWithPath: "/tmp/star-video.mkv")
+        let mergedMKVDestination = DownloadManager.conversionDestination(for: mergedMKV, preferredExtension: "mp4")
+        assert(mergedMKVDestination.ffmpegOutputURL == URL(fileURLWithPath: "/tmp/star-video.mp4"), "MKV conversion should target the normal final MP4 path.")
+        assert(mergedMKVDestination.finalOutputURL == URL(fileURLWithPath: "/tmp/star-video.mp4"), "Final MKV conversion output should be the MP4 sibling.")
+
+        let existingDownloadLine = "[download] /tmp/Kovan & Inas ｜ Wedding Clip.mp4 has already been downloaded"
+        assert(DownloadManager.alreadyDownloadedOutputURL(from: existingDownloadLine)?.path == "/tmp/Kovan & Inas ｜ Wedding Clip.mp4", "Existing yt-dlp outputs should preserve the already downloaded MP4 path.")
         #endif
     }
 }
